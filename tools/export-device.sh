@@ -30,7 +30,7 @@ for fs in s.get("fonts", []):
     if fs.get("fontSet") != "ww":
         continue
     for f in fs.get("fonts", []):
-        for ext in (".cft", ".md5"):
+        for ext in (".cft", ".md5", ".ttf"):
             p = os.path.join("Fonts", f["filename"] + ext)
             if os.path.exists(p):
                 print(p)

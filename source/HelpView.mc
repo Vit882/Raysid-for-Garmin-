@@ -40,10 +40,12 @@ class HelpView extends WatchUi.View {
         var font = Graphics.FONT_XTINY;
         var lh = dc.getFontHeight(font);
         var top = (h * 0.22).toNumber();
-        // The up arrow (top - 10 .. top - 3) must stay clear of the title
-        var minTop = titleY + dc.getFontHeight(Graphics.FONT_TINY) + 12;
-        if (top < minTop) {
-            top = minTop;
+        // The up arrow sits centered in the gap between the title and the text;
+        // its size scales with the display (7 px half-width at 280 px)
+        var titleBottom = titleY + dc.getFontHeight(Graphics.FONT_TINY);
+        var ah = h / 40;
+        if (top < titleBottom + ah + 8) {
+            top = titleBottom + ah + 8;
         }
         var bottom = (h * 0.80).toNumber();
         var dy = r - top;
@@ -65,10 +67,11 @@ class HelpView extends WatchUi.View {
         // Arrows when there is text above or below the window
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         if (offset > 0) {
-            dc.fillPolygon([[r - 7, top - 3], [r + 7, top - 3], [r, top - 10]]);
+            var yc = (titleBottom + top) / 2;
+            dc.fillPolygon([[r - ah, yc + ah / 2], [r + ah, yc + ah / 2], [r, yc - ah / 2]]);
         }
         if (offset + visible < lines.size()) {
-            dc.fillPolygon([[r - 7, bottom + 3], [r + 7, bottom + 3], [r, bottom + 10]]);
+            dc.fillPolygon([[r - ah, bottom + 3], [r + ah, bottom + 3], [r, bottom + 3 + ah]]);
         }
         _visible = visible;
     }

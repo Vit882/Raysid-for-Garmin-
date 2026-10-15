@@ -4,10 +4,13 @@ The build number is incremented with every build sent for testing (`build.sh`); 
 
 ## 1.3
 
+### Build 89 (2026-10-15)
+- **Forerunner 70:** first build; layout checked in the simulator. The flashlight options are hidden (the watch has none).
+- **Help:** the scroll arrows scale with the display and sit between the title and the text.
+
 ### Build 88 (2026-10-15)
 - First public release on GitHub, for the fēnix 7X Pro.
 - **Upload to Žhavá místa:** points are sent in larger portions so the website does not split a route into small pieces: everything waiting is sent once 500 points have gathered or a route ends, and the rest of a route still being recorded at least every 40 minutes. Each point keeps the time it was measured; when points are merged on a full watch, the merged point gets the time of the newer one.
-- **Forerunner 70:** added as a second supported watch (layout still being tuned).
 - **Releases** are published automatically from `releases/v<version>/` by a GitHub workflow.
 - **Display:** new option *Mapping screen times out* under *Backlight always on*. When on, the backlight on the Mapping screen times out as set on the watch, while the other screens stay lit.
 

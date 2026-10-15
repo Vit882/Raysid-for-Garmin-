@@ -9,7 +9,7 @@ A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over B
 
 | | |
 |---|---|
-| Watch | Garmin fēnix 7X Pro (id `fenix7xpro`; developed and tested on fēnix 7X Pro Sapphire Solar); other similar models as needed, see [Supported watches](#supported-watches) |
+| Watch | Garmin fēnix 7X Pro (id `fenix7xpro`; developed and tested on fēnix 7X Pro Sapphire Solar), Forerunner 70 (`fr70`); other similar models as needed, see [Supported watches](#supported-watches) |
 | Dosimeter | [Raysid](https://raysid.com) (BLE) |
 | App languages | Czech, English, Polish |
 | Version | 1.3 (the build number is shown in the app under Help > About) |
@@ -64,6 +64,11 @@ To update, just overwrite the file. Settings and unsent points are kept if the n
 ## Supported watches
 
 The app is written for round button watches similar to the fēnix: START, BACK, UP, DOWN and LIGHT, Bluetooth LE and GPS. Each model needs the official device definition from the Garmin SDK Manager and a check of the on-screen layout, especially the button markers. The procedure is in [docs/BUILDING.md](docs/BUILDING.md#8-supporting-another-watch-model).
+
+| Watch | Connect IQ id | Status |
+|---|---|---|
+| fēnix 7X Pro (Solar / Sapphire Solar) | `fenix7xpro` | tested on the watch |
+| Forerunner 70 | `fr70` | checked in the simulator only; no flashlight, so its options are hidden |
 
 ## Documentation
 
