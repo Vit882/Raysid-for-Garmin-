@@ -1,1 +1,1 @@
-Pravidla a postup práce na projektu jsou v [AGENTS.md](AGENTS.md). Přečti ho celý před jakoukoli změnou.
+The rules and workflow for this project are in [AGENTS.md](AGENTS.md). Read all of it before making any change.

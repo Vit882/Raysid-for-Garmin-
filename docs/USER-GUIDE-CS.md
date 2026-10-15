@@ -1,6 +1,6 @@
 # Raysid Garmin – uživatelský návod
 
-Stejný text je v hodinkách v menu Nápověda (čeština, angličtina, polština). Soubor se generuje z `source/Tr.mc` skriptem `tools/gen-navod.py`, ručně ho neupravuj.
+Stejný text je v hodinkách v menu Nápověda. [English](USER-GUIDE.md), [polski](USER-GUIDE-PL.md). Soubor se generuje z `source/Tr.mc` skriptem `tools/gen-guide.py`, ručně ho neupravuj.
 
 ## Ovládání
 

@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application;
 import Toybox.Attention;
@@ -16,65 +16,65 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
 
-// Zaznam bodu s GPS do vlastniho uloziste aplikace (Application.Storage).
-// Bod se ulozi, kdyz se hodinky posunou aspon o nastavenou vzdalenost
-// od posledniho bodu a od Raysidu prislo cerstve mereni.
-// Body jsou v blocich po CHUNK bodech pod klici "r0", "r1", ...; kazdy bod
-// je 5 celych cisel: [lat*1e6, lon*1e6, unix cas, davka v nSv/h, cps*10].
-// Bloky tvori frontu: "rHead" je prvni neodeslany, "rChunks" rozpracovany.
-// Ke kazdemu uzavrenemu bloku patri "rm<i>" = [klic trasy, cislo davky,
-// posledni davka trasy, nazev trasy]. Uploader bloky posila na web a
-// odeslane maze. Trasa ma nejvys ROUTE_MAX bodu, pak zacne dalsi cast.
+// Records GPS points into the app's own storage (Application.Storage).
+// A point is saved when the watch has moved at least the set distance
+// from the last point and a fresh measurement has arrived from the Raysid.
+// Points are stored in chunks of CHUNK points under keys "r0", "r1", ...; each point
+// is 5 integers: [lat*1e6, lon*1e6, unix time, dose in nSv/h, cps*10].
+// Chunks form a queue: "rHead" is the first unsent one, "rChunks" the one in progress.
+// Each closed chunk has "rm<i>" = [route key, batch number,
+// last batch of the route, route name]. The Uploader sends chunks to the web and
+// deletes sent ones. A route has at most ROUTE_MAX points, then a new part starts.
 class Recorder {
     const CHUNK = 50;
     const FIELDS = 5;
-    const MAX_POINTS = 4000;         // neodeslanych bodu v pameti
-    const ROUTE_MAX = 5000;          // bodu v jedne trase na webu
-    const FLUSH_EVERY = 10;          // zapis do uloziste po kazdych 10 bodech
+    const MAX_POINTS = 4000;         // unsent points in memory
+    const ROUTE_MAX = 5000;          // points in one route on the web
+    const FLUSH_EVERY = 10;          // write to storage after every 10 points
     const FRESH_MS = 5000;
-    const PT_AVG_MS = 10000;   // nejdelsi okno prumeru k bodu mapovani
+    const PT_AVG_MS = 10000;   // longest averaging window for a mapping point
 
-    var enabled as Boolean = true;   // mapovani povolene (jinak skryte a vypnute)
-    var autostart as Boolean = false; // zapnout nahravani pri spusteni aplikace
+    var enabled as Boolean = true;   // mapping allowed (otherwise hidden and off)
+    var autostart as Boolean = false; // start recording when the app starts
     var on as Boolean = false;
-    var dist as Number = 5;          // metry mezi body
-    var minQ as Number = 4;          // nejnizsi prijata kvalita GPS (Position.QUALITY_*)
-    var count as Number = 0;         // neodeslanych bodu v pameti
-    var session as Number = 0;       // bodu od zapnuti nahravani
-    // Statistika od zapnuti nahravani (obrazovka Mapovani)
-    var meters as Float = 0.0;       // ujeta vzdalenost mezi ulozenymi body
-    var maxDose as Float = 0.0;      // nejvyssi davka v ulozenych bodech (uSv/h)
+    var dist as Number = 5;          // meters between points
+    var minQ as Number = 4;          // lowest accepted GPS quality (Position.QUALITY_*)
+    var count as Number = 0;         // unsent points in memory
+    var session as Number = 0;       // points since recording was started
+    // Statistics since recording was started (Mapping screen)
+    var meters as Float = 0.0;       // distance traveled between saved points
+    var maxDose as Float = 0.0;      // highest dose among saved points (uSv/h)
     var maxCps as Float = 0.0;
-    var startTime as Number = 0;     // unix cas zapnuti nahravani
+    var startTime as Number = 0;     // unix time when recording was started
     var full as Boolean = false;
-    var paused as Boolean = false;   // pozastaveno, dalsi start navaze na stejnou trasu
-    private var _pausedSec as Number = 0;  // delka pauz od zapnuti nahravani
+    var paused as Boolean = false;   // paused, the next start continues the same route
+    private var _pausedSec as Number = 0;  // total pause time since recording was started
     private var _pauseAt as Number = 0;
-    var gpsOk as Boolean = false;    // poloha s dobrou presnosti
-    var gpsWeak as Boolean = false;  // poloha je, ale presnost nestaci
-    var noData as Boolean = false;   // GPS je, ale z Raysidu nejsou platna data (body se neukladaji)
-    private var _noKick as Boolean = false;  // behem mazani nic neodesilat
+    var gpsOk as Boolean = false;    // position with good accuracy
+    var gpsWeak as Boolean = false;  // position available, but accuracy is not sufficient
+    var noData as Boolean = false;   // GPS available, but no valid data from the Raysid (points are not saved)
+    private var _noKick as Boolean = false;  // send nothing while deleting
     private var _state as RaysidState;
-    private var _head as Number = 0;      // prvni neodeslany blok
-    private var _chunks as Number = 0;    // rozpracovany blok
+    private var _head as Number = 0;      // first unsent chunk
+    private var _chunks as Number = 0;    // chunk in progress
     private var _buf as Array<Number> = [] as Array<Number>;
     private var _unsaved as Number = 0;
     private var _lastLat as Float? = null;
     private var _lastLon as Float? = null;
-    private var _lastPtMs as Number = 0;  // casovac pri poslednim bodu (prumer od nej)
-    // Prave nahravana trasa (null = dalsi bod zalozi novou)
+    private var _lastPtMs as Number = 0;  // timer at the last point (averaging starts from it)
+    // Route being recorded (null = the next point creates a new one)
     private var _route as String? = null;
     private var _routeName as String = "";
     private var _batch as Number = 0;
     private var _routePts as Number = 0;
     private var _part as Number = 1;
-    private var _start as Number = 0;     // unix cas zapnuti nahravani
-    // Slucovani pri plnem ulozisti: dalsi blok k projiti (-1 = neprobiha)
+    private var _start as Number = 0;     // unix time when recording was started
+    // Merging when storage is full: next chunk to process (-1 = not in progress)
     private var _cmpNext as Number = -1;
     private var _cmpGain as Number = 0;
-    const CMP_STEP = 4;              // bloku na jedno volani (kvuli watchdogu)
-    const CMP_ANY = 99;              // slucovat bez omezeni
-    var cmpMax as Number = 2;        // kolikrat smi byt kazdy bod sloucen (0 = nikdy)
+    const CMP_STEP = 4;              // chunks per call (because of the watchdog)
+    const CMP_ANY = 99;              // merge without limit
+    var cmpMax as Number = 2;        // how many times each point may be merged (0 = never)
 
     function initialize(state as RaysidState) {
         _state = state;
@@ -103,11 +103,11 @@ class Recorder {
         maxDose = flt("rMaxD");
         maxCps = flt("rMaxC");
         startTime = _start;
-        // Po slouceni maji bloky min bodu, proto se pocet uklada zvlast
+        // After merging, chunks have fewer points, so the count is stored separately
         var c = Storage.getValue("rCount");
         count = c instanceof Number ? c : (_chunks - _head) * CHUNK + _buf.size() / FIELDS;
-        // Pocet znovu secist (kdyby se po padu rozesel se skutecnosti);
-        // jen pri rozumnem poctu bloku, at start netrva
+        // Recount (in case it drifted from reality after a crash);
+        // only with a reasonable number of chunks, so startup is not slow
         if (_chunks - _head <= 100) {
             var n = _buf.size() / FIELDS;
             for (var i = _head; i < _chunks; i++) {
@@ -116,13 +116,13 @@ class Recorder {
             }
             count = n;
         }
-        // Plno zustava i po restartu (jinak by se zalozila kratka trasa a hned skoncila)
+        // Full stays full after a restart too (otherwise a short route would be created and end at once)
         var f = Storage.getValue("rFull");
         full = f instanceof Boolean && f;
         if (count < MAX_POINTS && pending() == 0) {
             full = false;
         }
-        // Nahravani se po spusteni samo nezapina (jen s volbou Nahravat vzdy po spusteni)
+        // Recording does not start by itself after launch (only with the Record always after launch option)
         on = false;
     }
 
@@ -143,13 +143,13 @@ class Recorder {
         return v instanceof Number ? v : def;
     }
 
-    // Pri startu aplikace: pokracovat v nahravani, nebo ho zapnout (autostart)
+    // On app start: resume recording, or start it (autostart)
     function resume() as Void {
         if (!enabled) {
             return;
         }
-        // Trasa, kterou minule nic neukoncilo (napr. pad aplikace): uzavrit,
-        // aby jeji posledni body odesly na web
+        // A route that nothing closed last time (e.g. an app crash): close it
+        // so its last points go to the web
         if (_route != null) {
             closeChunk(true);
         }
@@ -158,7 +158,7 @@ class Recorder {
         }
     }
 
-    // GPS co nejpresneji: fenix 7X Pro Sapphire umi vsechny systemy na L1 i L5
+    // GPS as precise as possible: the fenix 7X Pro Sapphire supports all systems on L1 and L5
     private function gpsOn() as Void {
         if (Position has :hasConfigurationSupport) {
             var cfgs = [
@@ -194,7 +194,7 @@ class Recorder {
         var old = cmpMax;
         cmpMax = n;
         put("rCmp", n);
-        // Vic slucovani po zaplneni: zase jde nahravat (dalsi bod slouci)
+        // More merging after storage filled up: recording is possible again (the next point merges)
         if (full && n > old) {
             setFull(false);
         }
@@ -220,8 +220,8 @@ class Recorder {
             return;
         }
         if (paused) {
-            // Pokracovat po pauze: stejna trasa i statistika. Prvni bod po
-            // pauze se ulozi hned a usek ujety behem pauzy se nepocita.
+            // Resume after a pause: same route and statistics. The first point after
+            // the pause is saved immediately and the distance covered during the pause is not counted.
             paused = false;
             on = true;
             _pausedSec += Time.now().value() - _pauseAt;
@@ -232,12 +232,12 @@ class Recorder {
             gpsOn();
             return;
         }
-        // Predchozi trasa zustala otevrena (napr. po plnem ulozisti): uzavrit
-        // ji, aby jeji zbytek neodesel jako zacatek nove trasy
+        // The previous route was left open (e.g. after storage was full): close
+        // it so its rest is not sent as the start of the new route
         if (_route != null) {
             closeChunk(true);
             if (_route != null) {
-                storageFull();   // stale plno, nelze zacit
+                storageFull();   // still full, cannot start
                 return;
             }
         }
@@ -263,7 +263,7 @@ class Recorder {
         gpsOn();
     }
 
-    // Pozastavit: GPS vypnout, trasa zustane otevrena pro pokracovani
+    // Pause: turn off GPS, the route stays open for resuming
     function pause() as Void {
         if (!on) {
             return;
@@ -280,7 +280,7 @@ class Recorder {
         saveStats();
     }
 
-    // Doba nahravani bez pauz v sekundach
+    // Recording time without pauses, in seconds
     function activeSec() as Number {
         if (startTime <= 0 || (!on && !paused)) {
             return 0;
@@ -298,18 +298,18 @@ class Recorder {
         noData = false;
         put("rOn", false);
         Position.enableLocationEvents(Position.LOCATION_DISABLE, method(:onPosition));
-        // Ukoncit trasu, aby rozpracovany blok mohl odejit na web
+        // End the route so the chunk in progress can go to the web
         if (_route != null) {
             closeChunk(true);
         }
         flush();
     }
 
-    // Pri ukonceni aplikace: nahravani skonci (trasa se uzavre a jeji
-    // posledni blok odejde na web pri dalsim spusteni)
+    // On app exit: recording ends (the route is closed and its
+    // last chunk goes to the web on the next launch)
     function suspend() as Void {
-        // Pri ukonceni aplikace uz nic neodesilat (odpoved by neprisla,
-        // blok odejde pri dalsim spusteni)
+        // On app exit, send nothing more (the reply would not arrive,
+        // the chunk goes on the next launch)
         _noKick = true;
         if (on || paused) {
             stop();
@@ -325,25 +325,25 @@ class Recorder {
     }
 
     function clear() as Void {
-        // Odpoved na prave odesilany blok uz nic nemaze a nic dalsiho
-        // (ani posledni rozpracovany blok) se uz neodesle
+        // The reply to the chunk being sent no longer deletes anything, and nothing else
+        // (not even the last chunk in progress) will be sent
         uploader().cancel();
-        // Bezici nahravani ukoncit; dalsi trasa dostane nove id, aby se na
-        // webu nesrazila s uz odeslanymi davkami
+        // End running recording; the next route gets a new id so that on the
+        // web it does not collide with batches already sent
         _noKick = true;
         if (on || paused) {
             stop();
         }
         _noKick = false;
-        // Mazat stovky bloku najednou by mohlo shodit watchdog: stare bloky
-        // se smazou postupne (gcStep), cislovani pokracuje za nimi
+        // Deleting hundreds of chunks at once could trigger the watchdog: old chunks
+        // are deleted gradually (gcStep), numbering continues after them
         var gc = Storage.getValue("rGc");
         var from = gc instanceof Array ? gc[0] as Number : _head;
         var to = _chunks;
         _chunks++;
         _head = _chunks;
-        // Nejdriv nova fronta, pak rozsah k mazani (pri padu mezi nimi
-        // zustanou nanejvys stare bloky, nesmaze se nic noveho)
+        // New queue first, then the range to delete (a crash between them
+        // leaves at most old chunks, nothing new is deleted)
         put("rHead", _head);
         put("rChunks", _chunks);
         put("rGc", [from, to] as Array<Storage.ValueType>);
@@ -352,7 +352,7 @@ class Recorder {
         count = 0;
         session = 0;
         setFull(false);
-        paused = false;   // smazana trasa: dalsi nahravani zacne novou
+        paused = false;   // deleted route: the next recording starts a new one
         _lastLat = null;
         _lastPtMs = 0;
         _lastLon = null;
@@ -363,15 +363,15 @@ class Recorder {
         Storage.deleteValue("rRoute");
     }
 
-    // Rozbehnute slucovani dobehne i bez novych bodu (napr. kdyz nejde
-    // uzavrit blok); vola se z casovace BLE
+    // A running merge finishes even without new points (e.g. when a chunk
+    // cannot be closed); called from the BLE timer
     function compactTick() as Void {
         if (_cmpNext >= 0 && !on) {
             compactStep();
         }
     }
 
-    // Postupne mazani bloku po Smazat neodeslane (vola se z casovace BLE)
+    // Gradual deletion of chunks after Delete unsent (called from the BLE timer)
     function gcStep() as Void {
         var gc = Storage.getValue("rGc");
         if (!(gc instanceof Array)) {
@@ -391,30 +391,30 @@ class Recorder {
         }
     }
 
-    // Uzavrene bloky cekajici na odeslani
+    // Closed chunks waiting to be sent
     function pending() as Number {
         return _chunks - _head;
     }
 
-    // Nejstarsi neodeslany blok: [body, [klic, davka, posledni, nazev]]
+    // Oldest unsent chunk: [points, [key, batch, last, name]]
     function headChunk() as Array? {
         while (_head < _chunks) {
             var pts = Storage.getValue("r" + _head);
             var meta = Storage.getValue("rm" + _head);
             if (pts instanceof Array && !(meta instanceof Array)) {
-                // Blok ze starsi verze aplikace bez popisu trasy
+                // Chunk from an older app version without route metadata
                 meta = ["garmin-old-" + _head, 0, true, "Raysid Garmin"];
             }
             if (pts instanceof Array && meta instanceof Array) {
                 return [pts, meta];
             }
-            // Poskozeny blok: preskocit
+            // Damaged chunk: skip
             dropHead();
         }
         return null;
     }
 
-    // Nejstarsi blok byl odeslan: smazat ho z pameti
+    // The oldest chunk was sent: delete it from memory
     function dropHead() as Void {
         if (_head >= _chunks) {
             return;
@@ -435,8 +435,8 @@ class Recorder {
     }
 
     function onPosition(info as Position.Info) as Void {
-        // Hodinky davaji jen stupen kvality, ne presnost v metrech. Body se
-        // ukladaji jen od nastaveneho stupne (vychozi GOOD), horsi se zahodi.
+        // The watch only gives a quality level, not accuracy in meters. Points are
+        // saved only from the set level up (default GOOD), worse ones are dropped.
         var acc = info.accuracy;
         var fix = acc != null && acc >= Position.QUALITY_POOR && info.position != null;
         gpsOk = fix && acc >= minQ;
@@ -446,10 +446,10 @@ class Recorder {
             return;
         }
         var fresh = _state.lastUpdate != null && System.getTimer() - (_state.lastUpdate as Number) < FRESH_MS;
-        // Pri pretizeni Raysidu se body nezapisuji (hodnoty nejsou platne)
+        // During Raysid overload no points are written (the values are not valid)
         noData = !fresh || _state.doseRate == null || _state.cps == null || _state.ovl;
         if (noData) {
-            // Prumer k dalsimu bodu az od konce vypadku/pretizeni
+            // Averaging for the next point starts only at the end of the outage/overload
             _lastPtMs = System.getTimer();
             return;
         }
@@ -466,8 +466,8 @@ class Recorder {
         addPoint(deg[0], deg[1]);
     }
 
-    // Hodnota k bodu: prumer mereni od predchoziho bodu, nejvys za poslednich
-    // 10 s (po startu nebo pauze jen 10 s). Nezavisi na prumerovani displeje.
+    // Value for a point: average of measurements since the previous point, at most over the last
+    // 10 s (after start or pause only 10 s). Independent of display averaging.
     private function pointValues() as Array<Float> {
         var now = System.getTimer();
         var from = now - PT_AVG_MS;
@@ -479,7 +479,7 @@ class Recorder {
         return v != null ? v as Array<Float> : [_state.doseRate as Float, _state.cps as Float] as Array<Float>;
     }
 
-    // Zalozi novou trasu (pri prvnim bodu po zapnuti nebo po ROUTE_MAX bodech)
+    // Creates a new route (at the first point after starting or after ROUTE_MAX points)
     private function newRoute() as Void {
         var id = System.getDeviceSettings().uniqueIdentifier;
         var dev = id != null && id.length() >= 6 ? id.substring(0, 6) : "watch";
@@ -530,18 +530,18 @@ class Recorder {
         compactStep();
     }
 
-    // Uzavre rozpracovany blok a zaradi ho do fronty k odeslani.
-    // final = posledni davka trasy (i prazdna, aby se server dozvedel konec).
+    // Closes the chunk in progress and adds it to the send queue.
+    // final = last batch of the route (even empty, so the server learns it ended).
     private function closeChunk(final as Boolean) as Void {
         if (_route == null || (_buf.size() == 0 && !final)) {
             return;
         }
-        // Blok bez popisu by se nedal odeslat: kdyz se popis nevejde, smazat i body
+        // A chunk without metadata could not be sent: if the metadata does not fit, delete the points too
         if (!put("r" + _chunks, _buf as Array<Storage.ValueType>)
                 || !put("rm" + _chunks, [_route, _batch, final, _routeName] as Array<Storage.ValueType>)) {
             Storage.deleteValue("r" + _chunks);
-            // Body zustanou v pameti a blok se zkusi zavrit znovu po slouceni;
-            // kdyz uz neni co slucovat nebo pamet roste, nahravani skonci
+            // The points stay in memory and closing the chunk is retried after merging;
+            // when there is nothing left to merge or memory keeps growing, recording ends
             if (_cmpNext < 0 && _buf.size() >= 2 * CHUNK * FIELDS) {
                 storageFull();
             } else {
@@ -553,8 +553,8 @@ class Recorder {
         _batch++;
         _buf = [] as Array<Number>;
         _unsaved = 0;
-        // rChunks az nakonec: pri padu mezi zapisy nevznikne blok se
-        // starym cislem davky (server by ho zahodil jako duplicitu)
+        // rChunks last: a crash between writes cannot create a chunk with
+        // an old batch number (the server would drop it as a duplicate)
         put("rBatch", _batch);
         put("rRPts", _routePts);
         put("rCount", count);
@@ -582,13 +582,13 @@ class Recorder {
         }
     }
 
-    // Plne uloziste nebo MAX_POINTS: neodeslane bloky (krome nejstarsiho, ten se
-    // muze prave odesilat) projit a z kazde dvojice bodu nechat ten s vyssi
-    // davkou (skutecna poloha i hodnoty, hotspoty se nerozmazou). Bod pak
-    // vychazi zhruba na dvojnasobnou vzdalenost; pri dalsim zaplneni znovu.
+    // Storage full or MAX_POINTS: go through unsent chunks (except the oldest, which
+    // may be being sent right now) and from each pair of points keep the one with the higher
+    // dose (real position and values, hotspots are not smeared). Points then end up
+    // roughly twice as far apart; on the next fill, again.
     private function startCompact() as Void {
         if (cmpMax <= 0) {
-            // Slucovani vypnute: nahravani skonci
+            // Merging disabled: recording ends
             if (on) {
                 stop();
             }
@@ -606,14 +606,14 @@ class Recorder {
             return;
         }
         if (_cmpNext <= _head) {
-            _cmpNext = _head + 1;   // nejstarsi blok se mezitim odeslal
+            _cmpNext = _head + 1;   // the oldest chunk was sent in the meantime
         }
         var end = _cmpNext + CMP_STEP;
         for (; _cmpNext < end && _cmpNext < _chunks; _cmpNext++) {
             var key = "r" + _cmpNext;
             var pts = Storage.getValue(key);
             var meta = Storage.getValue("rm" + _cmpNext);
-            // meta[4] = kolikrat uz byl blok sloucen (starsi bloky ho nemaji)
+            // meta[4] = how many times the chunk was already merged (older chunks lack it)
             if (!(pts instanceof Array) || pts.size() < 2 * FIELDS || !(meta instanceof Array)) {
                 continue;
             }
@@ -642,21 +642,21 @@ class Recorder {
         if (_cmpNext >= _chunks) {
             _cmpNext = -1;
             put("rCount", count);
-            // Neni co slucovat (vse uz sloucene nastaveny pocet krat), nebo
-            // slouceni nestacilo pod MAX_POINTS (stare body uz sloucene nejvic)
+            // Nothing to merge (everything already merged the set number of times), or
+            // merging did not get below MAX_POINTS (old points already merged the most)
             if (_cmpGain == 0 || count >= MAX_POINTS) {
                 if (on) {
                     stop();
                 }
                 storageFull();
             } else if (full) {
-                setFull(false);   // slouceni uvolnilo misto: zase jde nahravat
+                setFull(false);   // merging freed space: recording is possible again
             }
         }
     }
 
-    // Uloziste je plne: dal nenahravat, GPS vypnout, uz ulozene body zustanou
-    // a odejdou na web; jednou upozornit dlouhou vibraci
+    // Storage is full: stop recording, turn off GPS, already saved points stay
+    // and go to the web; warn once with a long vibration
     private function storageFull() as Void {
         if (!full && Attention has :vibrate) {
             Attention.vibrate([new Attention.VibeProfile(100, 1500)] as Array<Attention.VibeProfile>);
@@ -670,7 +670,7 @@ class Recorder {
         put("rOn", false);
     }
 
-    // Vzdalenost v metrech; na par desitek metru staci rovinna aproximace
+    // Distance in meters; for a few dozen meters a planar approximation is enough
     static function distance(lat1 as Float, lon1 as Float, lat2 as Float, lon2 as Float) as Float {
         var dy = (lat2 - lat1) * 111132.0;
         var dx = (lon2 - lon1) * 111320.0 * Math.cos(Math.toRadians((lat1 + lat2) / 2.0)).toFloat();

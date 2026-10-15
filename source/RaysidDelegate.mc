@@ -1,18 +1,18 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application.Storage;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
 
-// Menu se otevira jen tlacitkem START. Dotyk, swipe ani podrzeni UP nic nedelaji.
+// The menu opens only with the START button. Touch, swipe and holding UP do nothing.
 class RaysidDelegate extends WatchUi.BehaviorDelegate {
     private var _state as RaysidState;
     private var _ble as BleManager;
@@ -23,13 +23,13 @@ class RaysidDelegate extends WatchUi.BehaviorDelegate {
         _ble = ble;
     }
 
-    // START na fenixu chodi podle firmwaru bud jako onKey(KEY_ENTER), nebo jako
-    // onSelect. Klepnuti na displej vola taky onSelect, proto ho podle casu
-    // posledniho dotyku odfiltrujeme.
+    // Depending on firmware, START on the fenix arrives either as onKey(KEY_ENTER) or as
+    // onSelect. A tap on the display also calls onSelect, so we filter it out by
+    // the time of the last touch.
     private var _lastTap as Number = -10000;
 
     function onKey(keyEvent as WatchUi.KeyEvent) as Boolean {
-        // Jakekoli tlacitko behem zvoneni alarmu ho jen umlci
+        // Any button while an alarm is ringing only silences it
         if (_state.seqLeft > 0) {
             _state.seqLeft = 0;
             return true;
@@ -50,19 +50,19 @@ class RaysidDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    // DOWN prepina mezi hodnotami, grafem a (pri zapnutem mapovani)
-    // obrazovkou mapovani
+    // DOWN switches between values, the chart and (with mapping on)
+    // the mapping screen
     function onNextPage() as Boolean {
-        // Ladici obrazovka prekryva vsechny stranky: tlacitka nic nedelaji,
-        // at se skryte nic nezmeni (napr. nespusti nahravani)
+        // The debug screen covers all pages: buttons do nothing,
+        // so nothing changes unseen (e.g. recording does not start)
         if (_state.showDebug) {
             return true;
         }
         return switchPage(1);
     }
 
-    // UP ma na kazde obrazovce vlastni akci: hlavni obrazovka prohodi davku
-    // a cps, graf prepne delku, mapovani zapne nebo pozastavi nahravani
+    // UP has its own action on each screen: the main screen swaps dose rate
+    // and cps, the chart switches length, mapping starts or pauses recording
     function onPreviousPage() as Boolean {
         if (_state.showDebug) {
             return true;
@@ -86,7 +86,7 @@ class RaysidDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    // Nova obrazovka vyjede zdola (DOWN = dalsi), aby prepnuti nebylo trhane
+    // The new screen slides in from below (DOWN = next) so the switch is not jerky
     private function switchPage(step as Number) as Boolean {
         var n = recorder().enabled ? 3 : 2;
         _state.page = (_state.page + step + n) % n;
@@ -108,8 +108,8 @@ class RaysidDelegate extends WatchUi.BehaviorDelegate {
 
     private function openMenu() as Void {
         var menu = new WatchUi.Menu2({:title => "Raysid"});
-        // Podle predpokladane cetnosti pouziti: nejcastejsi nahore
-        // Signalizace a Alarmy jsou v hodinkach, Raysid je vse ulozene v dozimetru
+        // By expected frequency of use: most frequent at the top
+        // Signals and Alarms are on the watch, Raysid is everything stored in the dosimeter
         menu.addItem(new WatchUi.MenuItem(Tr.t(:mSignal), Tr.t(:inWatch), :mSignal, null));
         menu.addItem(new WatchUi.MenuItem(Tr.t(:mAlarms), alarmsLabel(_state), :mAlarms, null));
         menu.addItem(new WatchUi.MenuItem(Tr.t(:mDevice), Tr.t(_state.status), :mDevice, null));
@@ -121,20 +121,20 @@ class RaysidDelegate extends WatchUi.BehaviorDelegate {
     }
 }
 
-// Delicka hodinek i Raysidu: jen hodnoty, ktere nabizi aplikace Raysid
+// Watch and Raysid divider: only values offered by the Raysid app
 const DIVIDERS = [1, 5, 10, 20, 50, 100, 250];
-// Delicka primo v Raysidu: hodnoty jako v oficialni aplikaci
+// Divider directly in the Raysid: values as in the official app
 
 const CHART_LENGTHS = [10, 20, 30, 60];
 const AVG_MODE_KEYS = [:avgOff, :avgTime, :avgCount];
 const AVG_SECS = [2, 4, 6, 10];
 const AVG_COUNTS = [2, 3, 5, 10, 20];
-const AVG_SEC_MAX = 60;     // strop vlastni hodnoty (historie v pameti je 600 mereni)
+const AVG_SEC_MAX = 60;     // cap for a custom value (in-memory history is 600 measurements)
 const AVG_COUNT_MAX = 30;
 const DOSE_LIMITS = [0.3, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 500.0];
 const CPS_LIMITS = [50, 100, 200, 500, 1000, 2000, 3000, 5000];
-// Meze alarmu jen pod pretizenim: Raysid hlasi OVL cps od ~5,4-5,8 kcps
-// (log 14. 10. 2026), davka je OVL nad OVL_DOSE
+// Alarm limits only below overload: the Raysid reports OVL cps from ~5.4-5.8 kcps
+// (log of 14 Oct 2026), dose rate is OVL above OVL_DOSE
 const ALARM_CPS_MAX = 5000;
 const ALARM_DOSE_MAX = 999.0;
 const LANG_NAMES = ["Čeština", "English", "Polski"];
@@ -145,7 +145,7 @@ const CUSTOM_ID = -1;
 const REC_DISTS = [5, 8, 10, 12, 15];
 const GPS_QUALS = [4, 3, 2];   // Position.QUALITY_GOOD, USABLE, POOR
 const GPS_QUAL_KEYS = [:qGood, :qUsable, :qPoor];
-// Kolikrat smi byt bod pri plnem ulozisti sloucen (99 = bez omezeni)
+// How many times a point may be merged when storage is full (99 = unlimited)
 const CMP_OPTS = [0, 1, 2, 3, 99];
 
 function cmpLabel(n as Number) as String {
@@ -155,7 +155,7 @@ function cmpLabel(n as Number) as String {
     return n >= 99 ? Tr.t(:cmpAny) : Tr.t(:cmpMaxN) + " " + n + "×";
 }
 
-// Popisek s nejvetsim rozestupem bodu po slouceni (kazde slouceni ho zdvojnasobi)
+// Label with the largest point spacing after merging (each merge doubles it)
 function cmpSubLabel(n as Number, dist as Number) as String {
     if (n <= 0 || n >= 99) {
         return cmpLabel(n);
@@ -175,7 +175,7 @@ function qualLabel(q as Number) as String {
 const HELP_TOPICS = [:hControls, :hScreens, :hRecord, :hSignal, :hAlarms, :hRise, :hAbout];
 const HELP_TEXTS = [:hControlsT, :hScreensT, :hRecordT, :hSignalT, :hAlarmsT, :hRiseT, :hAbout];
 
-// Text O aplikaci: verze a datum buildu z BuildInfo.mc (generuje build.sh)
+// About text: version and build date from BuildInfo.mc (generated by build.sh)
 function aboutText() as String {
     return "Raysid Garmin " + APP_VERSION + " \n " + Tr.t(:aboutBuild) + " " + BUILD_NUM + " (" + BUILD_DATE + "), © " + APP_YEAR
         + " \n \n " + Tr.t(:aboutAuthor) + ": Vít Cenek \n vitcenek@gmail.com"
@@ -183,7 +183,7 @@ function aboutText() as String {
         + " \n \n Žhavá místa: zhavamista.cz \n Raysid: raysid.com";
 }
 
-// Popisek prumerovani ("10 s" nebo "5x"), null pri okamzitych hodnotach
+// Averaging label ("10 s" or "5x"), null for instantaneous values
 function avgLabel(state as RaysidState) as String? {
     if (state.avgMode == 1) {
         return Tr.t(:avgShort) + " " + state.avgSec + " s";
@@ -197,7 +197,7 @@ function avgSpanLabel(state as RaysidState) as String {
     return state.avgMode == 1 ? state.avgSec + " s" : state.avgN + " " + Tr.t(:avgMeas);
 }
 
-// Podmenu Displej: nahore prumerovani, pri okamzitych hodnotach bez delky
+// Display submenu: averaging at the top, no length for instantaneous values
 function displayMenu(state as RaysidState) as WatchUi.Menu2 {
     var m = new WatchUi.Menu2({:title => Tr.t(:mDisplay)});
     m.addItem(new WatchUi.MenuItem(Tr.t(:avgMode), Tr.t(AVG_MODE_KEYS[state.avgMode] as Symbol), :avgMode, null));
@@ -209,10 +209,10 @@ function displayMenu(state as RaysidState) as WatchUi.Menu2 {
     return m;
 }
 
-// Polozka skupiny alarmu, ze ktere je otevrene podmenu (pro obnovu popisku)
+// Alarm group item the submenu was opened from (to refresh its label)
 var gGroupItem as WatchUi.MenuItem? = null;
 
-// Popisek skupiny alarmu: zapnuto/vypnuto a mez
+// Alarm group label: on/off and limit
 function alarmGroupLabel(state as RaysidState, id as Symbol) as String {
     if (id == :gDose) {
         return onOff(state.doseOn) + ", " + doseLabel(state.alarmDose);
@@ -233,7 +233,7 @@ function onOff(v as Boolean) as String {
     return Tr.t(v ? :on : :off);
 }
 
-// Popisek polozky Zaznam: zapnuto/vypnuto a pocet bodu
+// Recording item label: on/off and number of points
 function recordLabel() as String {
     var r = recorder();
     if (!r.enabled) {
@@ -242,13 +242,13 @@ function recordLabel() as String {
     return (r.full ? Tr.t(:recFull) : (r.paused ? Tr.t(:recPauseUp) : onOff(r.on))) + ", " + r.count + " " + Tr.t(:points);
 }
 
-// Hlavni menu Alarmy: zapnuto jen kdyz je zapnuty aspon jeden alarm
+// Main Alarms menu: on only when at least one alarm is enabled
 function alarmsLabel(state as RaysidState) as String {
     return onOff(state.alarmsOn && (state.doseOn || state.cpsOn || state.softOn));
 }
 
-// Obnovi popisek polozky po navratu z jejiho podmenu (stav se mezitim
-// mohl zmenit: overeni webu, smazani, alarmy, pripojeni)
+// Refreshes an item's label after returning from its submenu (the state may
+// have changed meanwhile: website check, deletion, alarms, connection)
 function refreshItem(state as RaysidState, ble as BleManager, item as WatchUi.MenuItem) as Void {
     var id = item.getId();
     if (id == :mRecord) {
@@ -268,7 +268,7 @@ function refreshItem(state as RaysidState, ble as BleManager, item as WatchUi.Me
     }
 }
 
-// Popisek polozky Pripojeni: vybrany Raysid, pripadne zamek
+// Connection item label: chosen Raysid, possibly the lock
 function connLabel(ble as BleManager) as String {
     var p = ble.pin;
     if (p == null) {
@@ -283,18 +283,18 @@ function dividerLabel(n as Number) as String {
     return "1:" + n;
 }
 
-// Delicka Raysidu; pri sloucene delicce plati poznamka i pro hodinky
+// Raysid divider; with linked dividers the note also applies to the watch
 function devDivLabel(state as RaysidState, n as Number) as String {
     return state.divLink ? watchDivLabel(n) : dividerLabel(n);
 }
 
-// Delicka hodinek: pri 1:1 se signalizace vypne, zustanou jen alarmy
+// Watch divider: at 1:1 signalling turns off, only alarms remain
 function watchDivLabel(n as Number) as String {
     return n <= 1 ? "1:1 " + Tr.t(:div1Note) : "1:" + n;
 }
 
 function doseLabel(v as Float) as String {
-    // Tolik mist, aby byla videt i vlastni mez (napr. 0.05 nebo 1.5)
+    // Enough decimals to show a custom limit too (e.g. 0.05 or 1.5)
     var s = v.format("%.2f");
     if (s.find(".") != null) {
         while ((s.substring(s.length() - 1, s.length()) as String).equals("0")) {
@@ -311,39 +311,39 @@ function cpsLabel(v as Number) as String {
     return v + " cps";
 }
 
-// Pretizeni Raysidu: nad temito okamzitymi hodnotami se misto cisla
-// ukaze OVL. Predbezne podle mereni, upresnit u vyrobce. Stav OVL drzi
-// (state.cpsOvlOn / doseOvlOn), viz RaysidState.updateOvl.
+// Raysid overload: above these instantaneous values OVL is shown instead of
+// the number. Preliminary, based on measurements; confirm with the manufacturer. The OVL state is held
+// (state.cpsOvlOn / doseOvlOn), see RaysidState.updateOvl.
 const OVL_CPS = 7200.0;        // cps
-const OVL_CPS_ON = false;      // strop cps vypnuty na test (Vit, 14.10.2026), true = vratit
-const OVL_DOSE = 999.0;        // uSv/h, nad tuto mez se nikdy nic neukaze
-const OVL_RESET_DOSE = 10.0;   // uSv/h, konec OVL u cps
-const OVL_DOSE_RESET = 900.0;  // uSv/h, konec OVL u davky (hystereze pod 999)
-// Zahlceni podle poklesu: cps byly v poslednich OVL_DROP_MS aspon
-// OVL_DROP_MIN_CPS, pak spadly nejvys na OVL_DROP_CPS jejich spicky a davka
-// proti tomu klesla aspon OVL_DROP_GAP-krat mene (pomer davka/cps vyskocil).
-// Pri vzdalovani od zdroje klesa davka i cps stejne, takze se nespusti.
-// Odhad, doladit podle mereni se zdrojem.
+const OVL_CPS_ON = false;      // cps cap disabled for testing (Vit, 14.10.2026), true = restore
+const OVL_DOSE = 999.0;        // uSv/h, above this limit nothing is ever shown
+const OVL_RESET_DOSE = 10.0;   // uSv/h, end of OVL for cps
+const OVL_DOSE_RESET = 900.0;  // uSv/h, end of OVL for dose rate (hysteresis below 999)
+// Saturation detected by a drop: within the last OVL_DROP_MS cps were at least
+// OVL_DROP_MIN_CPS, then fell to at most OVL_DROP_CPS of their peak, and the dose rate
+// fell at least OVL_DROP_GAP times less in comparison (dose/cps ratio jumped).
+// When moving away from a source, dose rate and cps fall equally, so it does not trigger.
+// Estimate, tune by measuring with a source.
 const OVL_DROP_MS = 10000;
 const OVL_DROP_MIN_CPS = 2000.0;
 const OVL_DROP_CPS = 0.5;
 const OVL_DROP_GAP = 1.5;
-// Rychle pravidlo: cps spadly aspon o 10 % spicky a davka pritom stoji,
-// klesla nejvys o OVL_FAST_DOSE nebo roste
+// Fast rule: cps fell by at least 10 % of the peak while the dose rate stays flat,
+// fell by at most OVL_FAST_DOSE or is rising
 const OVL_FAST_CPS = 0.90;
 const OVL_FAST_DOSE = 0.95;
-// Konec OVL u cps: cps zase aspon na OVL_EXIT_CPS spicky pred zahlcenim a
-// davka nejvys na OVL_EXIT_DOSE sve hodnoty ve spicce, OVL_EXIT_N mereni po
-// sobe. Pojistka: davka pod OVL_RESET_DOSE.
+// End of OVL for cps: cps back to at least OVL_EXIT_CPS of the peak before saturation and
+// dose rate at most OVL_EXIT_DOSE of its value at the peak, OVL_EXIT_N measurements
+// in a row. Safety net: dose rate below OVL_RESET_DOSE.
 const OVL_EXIT_CPS = 0.9;
-const OVL_EXIT_DOSE = 1.3;   // volne: davka Raysidu se zpozduje
+const OVL_EXIT_DOSE = 1.3;   // loose: the Raysid dose rate lags
 const OVL_EXIT_N = 2;
-// nebo: cps i davka jdou stejnym smerem (cps aspon o OVL_SAME_STEP za
-// mereni) OVL_SAME_N mereni po sobe
+// or: cps and dose rate move in the same direction (cps by at least OVL_SAME_STEP per
+// measurement) OVL_SAME_N measurements in a row
 const OVL_SAME_STEP = 0.05;
 const OVL_SAME_N = 3;
 
-// OVL se ukazuje jen u veliciny, ktera do nej spadla
+// OVL is shown only for the quantity that went into it
 function cpsOvl(state as RaysidState) as Boolean {
     return state.cpsOvlOn;
 }
@@ -352,8 +352,8 @@ function doseOvl(state as RaysidState) as Boolean {
     return state.doseOvlOn;
 }
 
-// Davka: pod 10 uSv/h na dve desetinna mista (0.12, 1.23), pak 12.3 a 123 uSv/h,
-// od 1000 uSv/h stejne v mSv/h (hranice po zaokrouhleni, at nevznikne 1.000)
+// Dose rate: below 10 uSv/h with two decimals (0.12, 1.23), then 12.3 and 123 uSv/h,
+// from 1000 uSv/h the same in mSv/h (threshold after rounding, so 1.000 never appears)
 function doseNum(v as Float?) as String {
     if (v == null) {
         return "--";
@@ -371,8 +371,8 @@ function doseUnit(v as Float?) as String {
     return v != null && v >= 999.5 ? "mSv/h" : "uSv/h";
 }
 
-// Cps: do 1000 s jednim desetinnym mistem, nad tim kcps jako 1.23,
-// nad 10 000 jako 12.3 a nad 100 000 jako 123
+// Cps: up to 1000 with one decimal, above that kcps as 1.23,
+// above 10 000 as 12.3 and above 100 000 as 123
 function cpsNum(v as Float?) as String {
     if (v == null) {
         return "--";
@@ -392,11 +392,11 @@ function pctLabel(v as Number) as String {
     return "+" + v + " %";
 }
 
-// Obsluha hlavniho menu i vsech podmenu. parentItem je polozka nadrazeneho
-// menu, ktere se po zmene obnovi popisek (napr. Alarmy: zapnuto).
+// Handler for the main menu and all submenus. parentItem is the parent menu item
+// whose label is refreshed after a change (e.g. Alarms: on).
 class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
-    // Navrat o uroven zpet s posuvnou animaci (vychozi je bez animace);
-    // popisek polozky, ze ktere se podmenu otevrelo, se obnovi
+    // Go back one level with a slide animation (default is no animation);
+    // the label of the item the submenu was opened from is refreshed
     function onBack() as Void {
         var p = _parentItem;
         if (p != null) {
@@ -427,7 +427,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         WatchUi.pushView(m, new RaysidMenuDelegate(_state, _ble, parent), WatchUi.SLIDE_LEFT);
     }
 
-    // Podmenu Pripojeni: znovu pripojit, vybrany Raysid, zamek, preference
+    // Connection submenu: reconnect, chosen Raysid, lock, preferences
     private function connMenu() as WatchUi.Menu2 {
         var m = new WatchUi.Menu2({:title => Tr.t(:mConn)});
         m.addItem(new WatchUi.MenuItem(Tr.t(:reconnect), _state.deviceName, :reconnect, null));
@@ -437,7 +437,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         return m;
     }
 
-    // Podmenu Zaznam; pri vypnutem mapovani jen samotny vypinac
+    // Recording submenu; with mapping off only the switch itself
     private function recordMenu(parent as WatchUi.MenuItem?) as WatchUi.Menu2 {
         var r = recorder();
         var m = new WatchUi.Menu2({:title => Tr.t(:mRecord)});
@@ -452,7 +452,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         return m;
     }
 
-    // Prepinac nastaveni Raysidu; dokud Raysid stav nenahlasil, je u nej "?"
+    // Raysid settings toggle; until the Raysid reports its state it shows "?"
     private function devToggle(key as Symbol, value as Boolean?) as WatchUi.ToggleMenuItem {
         return new WatchUi.ToggleMenuItem(Tr.t(key), value == null ? "?" : null, key, value == true, null);
     }
@@ -465,14 +465,14 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         var id = item.getId();
         if (id == :reconnect) {
             _ble.restart();
-            // Zavrit podmenu Pripojeni, Raysid i hlavni menu
+            // Close the Connection submenu, the Raysid menu and the main menu
             _ble.devMenu = null;
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.popView(WatchUi.SLIDE_DOWN);
         } else if (id == :apiKey) {
             var v = new KeyEntryView(currentKey());
-            // Polozka Overit spojeni je v podmenu hned pod klicem
+            // The Test connection item is in the submenu right below the key
             var menu = WatchUi.getCurrentView()[0];
             var vi = null;
             var ui = null;
@@ -506,14 +506,14 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :mRecord) {
             WatchUi.pushView(recordMenu(item), new RaysidMenuDelegate(_state, _ble, item), WatchUi.SLIDE_LEFT);
         } else if (id == :mWeb) {
-            // Odesilani, API klic a overeni spojeni pohromade
+            // Upload, API key and connection check together
             push(Tr.t(:mWeb), [
                 new WatchUi.MenuItem(Tr.t(:mUpload), uploader().label(), :upload, null),
                 new WatchUi.MenuItem(Tr.t(:apiKey), keyLabel(), :apiKey, null),
                 new WatchUi.MenuItem(Tr.t(:verify), uploader().verifyLabel(), :verify, null)
             ] as Array<WatchUi.MenuItem>, item);
         } else if (id == :mStorage) {
-            // Neodeslane body, co delat pri zaplneni, smazani
+            // Unsent points, what to do when full, deletion
             push(Tr.t(:mStorage), [
                 new WatchUi.MenuItem(Tr.t(:stoPending), storeLabel(), :stoPending, null),
                 new WatchUi.MenuItem(Tr.t(:cmpWhen), cmpSubLabel(recorder().cmpMax, recorder().dist), :cmpMax, null),
@@ -522,11 +522,11 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :stoPending) {
             item.setSubLabel(storeLabel());
         } else if (id == :upload) {
-            // Zkusit odeslat hned a obnovit stav
+            // Try to upload right away and refresh the status
             uploader().retry();
             item.setSubLabel(uploader().label());
         } else if (id == :recClear) {
-            // Po smazani obnovit pocet v Neodeslano i v nadrazene polozce Uloziste
+            // After deletion refresh the count in Not uploaded and in the parent Storage item
             var cur = WatchUi.getCurrentView()[0];
             var pend = null;
             if (cur instanceof WatchUi.Menu2) {
@@ -546,7 +546,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
             push(Tr.t(:mSignal), items, null);
         } else if (id == :mDevice) {
             item.setSubLabel(Tr.t(_state.status));
-            // Nastaveni primo v Raysidu, stav podle jeho posledniho hlaseni
+            // Settings directly in the Raysid, state from its last report
             var div = _state.devDiv;
             var m = new WatchUi.Menu2({:title => Tr.t(:mDevice)});
             m.addItem(new WatchUi.MenuItem(Tr.t(:devDiv), div != null ? devDivLabel(_state, div) : "?", :devDiv, null));
@@ -554,15 +554,15 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
             m.addItem(devToggle(:devSound, _state.devSound));
             m.addItem(devToggle(:devDoseAl, _state.devDoseAl));
             m.addItem(devToggle(:devCpsAl, _state.devCpsAl));
-            // Pripojeni k Raysidu patri sem, pouziva se zridka
+            // Connecting to the Raysid belongs here, it is rarely used
             m.addItem(new WatchUi.MenuItem(Tr.t(:mConn), connLabel(_ble), :mConn, null));
-            // Az Raysid posle nastaveni, polozky se v otevrenem menu obnovi
+            // When the Raysid sends its settings, items in the open menu are refreshed
             _ble.devMenu = m;
             _ble.requestSettings();
             WatchUi.pushView(m, new RaysidMenuDelegate(_state, _ble, item), WatchUi.SLIDE_LEFT);
         } else if (id == :mAlarms) {
-            // Hlavni vypinac, pak kazdy alarm jako podmenu (vypinac + mez),
-            // stav je videt rovnou v popisku, takze se nemusi otevirat
+            // Main switch, then each alarm as a submenu (switch + limit),
+            // the state is visible right in the label, so it need not be opened
             var items = [
                 toggle(:alarmsAll, _state.alarmsOn),
                 new WatchUi.MenuItem(Tr.t(:gDose), alarmGroupLabel(_state, :gDose), :gDose, null),
@@ -585,7 +585,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
             ]);
             push(Tr.t(id as Symbol), items as Array<WatchUi.MenuItem>, item);
         } else if (id == :mAlarmOut) {
-            // Jak se alarm projevi: kazdy prvek jde vypnout zvlast
+            // How the alarm shows itself: each element can be turned off separately
             var items = [
                 toggle(:alarmSound, _state.alarmSound),
                 toggle(:alarmVibe, _state.alarmVibe),
@@ -622,12 +622,12 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
                 if (on) {
                     uploader().start();
                 } else if (recorder().pending() == 0) {
-                    uploader().stop();   // neodeslane body se odesilaji dal
+                    uploader().stop();   // unsent points keep being uploaded
                 }
                 if (_parentItem != null) {
                     (_parentItem as WatchUi.MenuItem).setSubLabel(recordLabel());
                 }
-                // Prestavet podmenu: bez mapovani zustane jen vypinac
+                // Rebuild the submenu: without mapping only the switch remains
                 WatchUi.switchToView(recordMenu(_parentItem), new RaysidMenuDelegate(_state, _ble, _parentItem), WatchUi.SLIDE_IMMEDIATE);
                 WatchUi.requestUpdate();
                 return;
@@ -635,7 +635,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
                 _state.divLink = on;
                 _state.save();
                 _ble.syncDivider();
-                // Poznamka "(jen alarmy)" u Delicky zavisi na slouceni
+                // The "(alarms only)" note on Divider depends on linking
                 var cur = WatchUi.getCurrentView()[0];
                 if (cur instanceof WatchUi.Menu2 && _state.devDiv != null) {
                     var idx = (cur as WatchUi.Menu2).findItemById(:devDiv);
@@ -645,7 +645,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
                 }
                 return;
             } else if (id == :devLock) {
-                // Bez vybraneho Raysidu nema zamek smysl
+                // Without a chosen Raysid the lock makes no sense
                 if (on && _ble.pin == null) {
                     (item as WatchUi.ToggleMenuItem).setEnabled(false);
                     item.setSubLabel(Tr.t(:devPickFirst));
@@ -710,7 +710,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
                 _state.alarmRedLed = on;
             }
             if (!on && (id == :alarmsAll || id == :doseAlarm || id == :cpsAlarm || id == :rise)) {
-                _state.seqLeft = 0;   // dobihajici alarm utnout
+                _state.seqLeft = 0;   // cut off a running alarm
             }
             if (!_state.alarmsOn) {
                 _state.hardAlarm = false;
@@ -721,10 +721,10 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         }
     }
 
-    // Podmenu s vyberem jedne hodnoty
+    // Submenu for choosing one value
     private function openChoice(id as Symbol, item as WatchUi.MenuItem) as Void {
         var labels = [] as Array<String>;
-        var focus = -1;   // -1 = zadna predvolba nesedi (vlastni hodnota)
+        var focus = -1;   // -1 = no preset matches (custom value)
         if (id == :divider) {
             for (var i = 0; i < DIVIDERS.size(); i++) {
                 labels.add(watchDivLabel(DIVIDERS[i] as Number));
@@ -771,7 +771,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
                 focus = GPS_QUALS[i] == recorder().minQ ? i : focus;
             }
         } else if (id == :devDiv) {
-            // Bez spojeni nejde delicku Raysidu zmenit: rovnou to rict
+            // The Raysid divider cannot be changed without a connection: say so right away
             if (!_ble.isConnected()) {
                 item.setSubLabel(Tr.t(:stDisconnected));
                 return;
@@ -809,12 +809,12 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
         for (var i = 0; i < labels.size(); i++) {
             m.addItem(new WatchUi.MenuItem(labels[i], null, i, null));
         }
-        // U mezi, citlivosti, vzdalenosti a prumeru jde zadat i vlastni hodnota
+        // For limits, sensitivity, distance and average a custom value can also be entered
         var custom = id == :doseLimit || id == :cpsLimit || id == :sensitivity || id == :recDist || id == :avgSpan;
         if (custom) {
             m.addItem(new WatchUi.MenuItem(Tr.t(:custom), null, CUSTOM_ID, null));
         }
-        // Nastavena vlastni hodnota: kurzor na Vlastni hodnota
+        // Custom value set: cursor on Custom value
         if (focus < 0) {
             focus = custom ? labels.size() : 0;
         }
@@ -824,7 +824,7 @@ class RaysidMenuDelegate extends WatchUi.Menu2InputDelegate {
 }
 
 class ChoiceMenuDelegate extends WatchUi.Menu2InputDelegate {
-    // Navrat o uroven zpet s posuvnou animaci (vychozi je bez animace)
+    // Go back one level with a slide animation (default is no animation)
     function onBack() as Void {
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
@@ -862,7 +862,7 @@ class ChoiceMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (_id == :avgMode) {
             _state.avgMode = i;
             _state.save();
-            // Prestavet menu Displej: polozka delky prumeru jen pri prumerovani
+            // Rebuild the Display menu: average length item only when averaging
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.switchToView(displayMenu(_state), new RaysidMenuDelegate(_state, _ble, null), WatchUi.SLIDE_RIGHT);
             WatchUi.requestUpdate();
@@ -905,7 +905,7 @@ class ChoiceMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (_id == :mLanguage) {
             Tr.lang = i;
             _state.save();
-            // Menu je postavene ve starem jazyce: zavrit vyber jazyka i hlavni menu
+            // The menu is built in the old language: close the language picker and the main menu
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.popView(WatchUi.SLIDE_RIGHT);
             WatchUi.requestUpdate();
@@ -915,7 +915,7 @@ class ChoiceMenuDelegate extends WatchUi.Menu2InputDelegate {
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
-    // Ulozi ciselnou hodnotu a obnovi popisek v nadrazenem menu
+    // Saves a numeric value and refreshes the label in the parent menu
     private function apply(v as Float) as Void {
         if (_id == :divider) {
             _state.divider = v.toNumber();
@@ -977,13 +977,13 @@ class ChoiceMenuDelegate extends WatchUi.Menu2InputDelegate {
     function onCustom(value as Float) as Void {
         apply(value);
         _state.save();
-        // Zavrit zadavani i seznam hodnot, zpet do podmenu
+        // Close the entry and the value list, back to the submenu
         WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 }
 
-// Potvrzeni smazani zaznamu
+// Confirm deleting the recording
 class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
     private var _item as WatchUi.MenuItem;
     private var _recItem as WatchUi.MenuItem?;
@@ -1007,7 +1007,7 @@ class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
 }
 
 class HelpMenuDelegate extends WatchUi.Menu2InputDelegate {
-    // Navrat o uroven zpet s posuvnou animaci (vychozi je bez animace)
+    // Go back one level with a slide animation (default is no animation)
     function onBack() as Void {
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
@@ -1024,9 +1024,9 @@ class HelpMenuDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-// Vyber Raysidu z historie: -1 kterykoli, -2 zapomenout historii
+// Raysid selection from history: -1 any, -2 forget history
 class DevicePickDelegate extends WatchUi.Menu2InputDelegate {
-    // Navrat o uroven zpet s posuvnou animaci (vychozi je bez animace)
+    // Go back one level with a slide animation (default is no animation)
     function onBack() as Void {
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
@@ -1051,11 +1051,11 @@ class DevicePickDelegate extends WatchUi.Menu2InputDelegate {
         } else if (i == -1) {
             _ble.setPin(null);
         } else {
-            // Podle jmena, ne indexu: historie se mezitim mohla preradit
+            // By name, not index: the history may have been reordered meanwhile
             _ble.setPin(item.getLabel());
         }
         _item.setSubLabel(_ble.pin != null ? _ble.pin : Tr.t(:devAny));
-        // Bez vybraneho se "Jen vybrany" vypne; s jinym vybranym se prepoji
+        // Without a chosen one "Only chosen Raysid" turns off; with a different one it reconnects
         var cm = _connMenu;
         if (cm != null) {
             var idx = cm.findItemById(:devLock);

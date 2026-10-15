@@ -1,22 +1,22 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
 import Toybox.WatchUi;
 
-// Jedna stranka napovedy. Text se zalamuje po slovech, UP/DOWN (a START) posouvaji text.
+// One help page. Text wraps at words, UP/DOWN (and START) scroll the text.
 class HelpView extends WatchUi.View {
     private var _title as String;
     private var _text as String;
-    var offset as Number = 0;       // prvni zobrazeny radek
+    var offset as Number = 0;       // first visible line
     var lineCount as Number = 0;
     private var _lines as Array<String>? = null;
 
@@ -35,14 +35,14 @@ class HelpView extends WatchUi.View {
         dc.setColor(0xFFAA00, Graphics.COLOR_TRANSPARENT);
         dc.drawText(r, h * 0.11, Graphics.FONT_TINY, _title, Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Textove okno drzime v prostredni casti kulateho displeje, kde je dost siroko
+        // Keep the text window in the middle of the round display, where it is wide enough
         var font = Graphics.FONT_XTINY;
         var lh = dc.getFontHeight(font);
         var top = (h * 0.22).toNumber();
         var bottom = (h * 0.80).toNumber();
         var dy = r - top;
         var maxW = (2 * Math.sqrt(r * r - dy * dy) - 16).toFloat();
-        // Zalomit jen jednou, ne pri kazdem posunu (dlouhe texty)
+        // Wrap only once, not on every scroll (long texts)
         if (_lines == null) {
             _lines = wrap(dc, font, maxW);
         }
@@ -56,7 +56,7 @@ class HelpView extends WatchUi.View {
             dc.drawText(r, y, font, lines[i] as String, Graphics.TEXT_JUSTIFY_CENTER);
             y += lh;
         }
-        // Sipky, kdyz je text nad nebo pod oknem
+        // Arrows when there is text above or below the window
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         if (offset > 0) {
             dc.fillPolygon([[r - 7, top - 3], [r + 7, top - 3], [r, top - 10]]);
@@ -74,7 +74,7 @@ class HelpView extends WatchUi.View {
         var lines = [] as Array<String>;
         var line = "";
         for (var i = 0; i < words.size(); i++) {
-            // Samostatne "\n" v textu = novy radek (prazdny radek mezi odstavci)
+            // A standalone "\n" in the text = new line (blank line between paragraphs)
             if ((words[i] as String).equals("\n")) {
                 lines.add(line);
                 line = "";

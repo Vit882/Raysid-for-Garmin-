@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application;
 import Toybox.BluetoothLowEnergy;
@@ -15,9 +15,9 @@ import Toybox.Time;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
-// Skenovani, pripojeni k Raysidu, zapnuti notifikaci a prijem dat.
-// Connect IQ dovoli jen jeden rozpracovany BLE pozadavek najednou,
-// proto jsou zapisy (CCCD, prikazy) ve fronte _queue.
+// Scanning, connecting to the Raysid, enabling notifications and receiving data.
+// Connect IQ allows only one pending BLE request at a time,
+// so writes (CCCD, commands) go through the _queue.
 class BleManager extends BluetoothLowEnergy.BleDelegate {
     private var _state as RaysidState;
     private var _device as BluetoothLowEnergy.Device? = null;
@@ -28,23 +28,23 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
     private var _parser as RaysidParser = new RaysidParser();
     private var _busySince as Number = 0;
     private var _alarms as Alarms;
-    private var _pairSince as Number = 0;   // kdy zacalo pripojovani (0 = neprobiha)
-    private var _logT as Number = 0;        // posledni radek mereni v ladicim logu
+    private var _pairSince as Number = 0;   // when connecting started (0 = not in progress)
+    private var _logT as Number = 0;        // last measurement line in the debug log
     const CONNECT_TIMEOUT_MS = 15000;
-    const RECOVER_MS = 30000;   // bez spojeni nebo bez dat tak dlouho: pripojit znovu
-    private var _downSince as Number = 0;   // kdy spojeni spadlo / chybi sluzba (0 = v poradku)
-    private var _lastRx as Number = 0;      // posledni prijata data
+    const RECOVER_MS = 30000;   // no connection or no data for this long: reconnect
+    private var _downSince as Number = 0;   // when the connection dropped / service missing (0 = OK)
+    private var _lastRx as Number = 0;      // last received data
     private var _lastPing as Number = 0;
-    const CHOOSE_MS = 3000;     // jak dlouho sbirat nalezene Raysidy, nez se vybere
+    const CHOOSE_MS = 3000;     // how long to collect found Raysids before choosing one
     const HISTORY_MAX = 6;
 
-    // Nastaveni pripojeni (ukladaji se)
-    var pin as String? = null;     // vybrany Raysid (jmeno)
-    var lock as Boolean = false;   // pripojovat jen vybrany
-    var pref as Number = 0;        // pri vice kusech: 0 vybrany/znamy, 1 nejsilnejsi signal
-    var history as Array<Array> = [] as Array<Array>;   // [[jmeno, unix cas], ...], nejnovejsi prvni
+    // Connection settings (persisted)
+    var pin as String? = null;     // selected Raysid (name)
+    var lock as Boolean = false;   // connect only to the selected one
+    var pref as Number = 0;        // with several units: 0 selected/known, 1 strongest signal
+    var history as Array<Array> = [] as Array<Array>;   // [[name, unix time], ...], newest first
 
-    // Raysidy nalezene v probihajicim hledani: jmeno -> ScanResult (nejsilnejsi)
+    // Raysids found in the current scan: name -> ScanResult (strongest)
     private var _cands as Dictionary<String, BluetoothLowEnergy.ScanResult> = {} as Dictionary<String, BluetoothLowEnergy.ScanResult>;
     private var _firstSeen as Number = 0;
 
@@ -66,7 +66,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         pin = name;
         if (name == null) {
             Storage.deleteValue("devPin");
-            // "Jen vybrany" bez vybraneho nema smysl
+            // "Selected only" makes no sense without a selected one
             if (lock) {
                 setLock(false);
             }
@@ -89,7 +89,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         return _device != null && (_device as BluetoothLowEnergy.Device).isConnected();
     }
 
-    // "Jen vybrany" a pripojeny je jiny Raysid: pripojit vybrany
+    // "Selected only" and a different Raysid is connected: connect the selected one
     function enforcePin() as Void {
         var p = pin;
         var n = _state.deviceName;
@@ -105,7 +105,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         setLock(false);
     }
 
-    // Pripojeny Raysid na zacatek historie; prvni pripojeny se stane vybranym
+    // Move the connected Raysid to the top of the history; the first one connected becomes selected
     private function remember(name as String?) as Void {
         if (name == null) {
             return;
@@ -116,8 +116,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
                 h.add(history[i] as Array);
             }
         }
-        // Vybranym se sam stane jen uplne prvni pripojeny Raysid; kdyz uzivatel
-        // pozdeji zvoli "kterykoli", zustane to tak
+        // Only the very first connected Raysid becomes selected automatically; if the user
+        // later chooses "any", it stays that way
         if (pin == null && history.size() == 0) {
             setPin(name);
         }
@@ -136,7 +136,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
 
     function start() as Void {
         register();
-        // Periodicky dotaz na data, pokud ho protokol vyzaduje
+        // Periodic data request, if the protocol requires it
         _timer.start(method(:onTick), RaysidProtocol.POLL_MS, true);
     }
 
@@ -170,13 +170,13 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         _downSince = 0;
         clearLive();
         if (!_profileReady) {
-            register();   // registrace profilu se nepovedla: zkusit znovu
+            register();   // profile registration failed: try again
             return;
         }
         startScan();
     }
 
-    // Po ztrate spojeni: alarmy a pretizeni zhasnout, nastaveni Raysidu neznama
+    // After losing the connection: clear alarms and overload, Raysid settings unknown
     private function clearLive() as Void {
         _alarms.reset();
         _state.cpsOvlOn = false;
@@ -206,10 +206,10 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         }
     }
 
-    // Po aktualizaci aplikace (nahrani pres USB) muze Raysid zustat spojeny
-    // s hodinkami z predchozi instance. Pak nevysila a skenovani ho nenajde,
-    // dokud se hodinky nerestartuji. Takove spojeni prevezmeme, a kdyz uz
-    // neni aktivni, zarizeni odparujeme, aby slo znovu najit.
+    // After an app update (upload over USB) the Raysid may stay connected
+    // to the watch from the previous instance. It then does not advertise and scanning
+    // will not find it until the watch restarts. We take over such a connection, and if it
+    // is no longer active, we unpair the device so it can be found again.
     private function adoptPaired() as Boolean {
         var adopted = false;
         try {
@@ -234,10 +234,10 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         return adopted;
     }
 
-    // Nalezene Raysidy se chvili sbiraji, aby se pri vice kusech dalo vybrat.
-    // Vybrany Raysid se pripoji hned; s "jen vybrany" se ostatni ignoruji.
+    // Found Raysids are collected for a while so one can be chosen among several.
+    // The selected Raysid connects immediately; with "selected only" the others are ignored.
     function onScanResults(scanResults as BluetoothLowEnergy.Iterator) as Void {
-        // Opozdene vysledky po zahajeni pripojovani: neparovat podruhe
+        // Late results after connecting has started: do not pair a second time
         if (_pairSince != 0 || (_device != null && _device.isConnected())) {
             return;
         }
@@ -252,7 +252,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             if (lock && pin != null && !name.equals(pin)) {
                 continue;
             }
-            // Vybrany hned, pokud se nema volit podle sily signalu
+            // Selected one immediately, unless choosing by signal strength
             if (pin != null && name.equals(pin) && (lock || pref == 0)) {
                 connect(r);
                 return;
@@ -268,7 +268,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         choose();
     }
 
-    // Po CHOOSE_MS vybere z nalezenych podle preference
+    // After CHOOSE_MS, picks from the found ones according to preference
     private function choose() as Void {
         if (_firstSeen == 0 || System.getTimer() - _firstSeen < CHOOSE_MS) {
             return;
@@ -312,8 +312,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             _lastRx = System.getTimer();
             _divSent = 0;
             _setReq = 0;
-            // Novy Raysid nebo firmware nemusi priznak pretizeni posilat;
-            // nastaveni predchoziho Raysidu uz neplati
+            // A new Raysid or firmware may not send the overload flag;
+            // the previous Raysid's settings no longer apply
             clearLive();
             _state.devDiv = null;
             _state.devSound = null;
@@ -326,8 +326,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             _parser.reset();
             subscribe();
         } else {
-            // Opozdene odpojeni stareho zarizeni po pripojeni noveho (nebo po
-            // restartu, kdy uz se hleda) ignorovat
+            // Ignore a late disconnect of the old device after connecting a new one (or after
+            // a restart, when scanning is already running)
             if (_device == null || _device.isConnected()) {
                 return;
             }
@@ -337,11 +337,11 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             _queue = [];
             _busy = false;
             _setReq = 0;
-            // Zarizeni zustava sparovane, Connect IQ se pokusi spojeni obnovit samo.
+            // The device stays paired, Connect IQ tries to restore the connection by itself.
         }
     }
 
-    // Zapne notifikace na datove charakteristice a posle inicializacni prikazy.
+    // Enables notifications on the data characteristic and sends the init commands.
     private function subscribe() as Void {
         var ch = characteristic(RaysidProtocol.notifyCharUuid());
         if (ch == null) {
@@ -375,15 +375,15 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
     function onTick() as Void {
         recorder().gcStep();
         recorder().compactTick();
-        // Pripojeni se nepovedlo vcas: zarizeni pustit a hledat znovu
+        // Connecting did not finish in time: release the device and scan again
         if (_pairSince != 0 && System.getTimer() - _pairSince > CONNECT_TIMEOUT_MS) {
             _pairSince = 0;
             restart();
             return;
         }
         var now = System.getTimer();
-        // Spojeni se samo neobnovilo, chybi sluzba nebo neprichazeji data:
-        // zarizeni pustit a hledat znovu (ne behem rozbehnuteho parovani)
+        // The connection did not recover by itself, the service is missing or no data arrives:
+        // release the device and scan again (not while pairing is in progress)
         var stale = _device != null && _device.isConnected() && _downSince == 0 && now - _lastRx > RECOVER_MS;
         if (_pairSince == 0 && ((_downSince != 0 && now - _downSince > RECOVER_MS) || stale)) {
             _downSince = 0;
@@ -391,13 +391,13 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             return;
         }
         choose();
-        WatchUi.requestUpdate(); // prekresli hodiny a "zastarale" hodnoty sede
+        WatchUi.requestUpdate(); // redraws the clock and grays out "stale" values
         if (_device == null || !_device.isConnected()) {
             return;
         }
-        // Ping drzi spojeni (bez nej Raysid po 10 s odpoji): kdyz je fronta
-        // plna, zaradi se na jeji zacatek, aby nevynechal. Rozpracovane cteni
-        // nastaveni nerozdelit, samo konci pingem.
+        // The ping keeps the connection alive (without it the Raysid disconnects after 10 s): if the queue
+        // is full, it goes to the front so it is not skipped. Do not split a settings read
+        // in progress, it ends with a ping itself.
         var cmd = RaysidProtocol.pollCommand();
         if (cmd != null && now - _lastPing >= RaysidProtocol.POLL_MS - 500) {
             _lastPing = now;
@@ -415,17 +415,17 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
                 _queue = q;
             }
         }
-        // Pojistka: kdyby potvrzeni zapisu neprislo, fronta by se zasekla
+        // Safety net: if a write confirmation never came, the queue would get stuck
         if (_busy && now - _busySince > 3000) {
             _busy = false;
         }
         pump();
     }
 
-    var devMenu as WatchUi.Menu2? = null;   // otevrene podmenu nastaveni Raysidu
+    var devMenu as WatchUi.Menu2? = null;   // open Raysid settings submenu
 
-    // Slouceni delicky: Raysid dostane delicku hodinek, kdyz se lisi.
-    // Jen jeden pokus na rozdil, at se pri odmitnuti nezacykli.
+    // Divider sync: the Raysid gets the watch divider when they differ.
+    // Only one attempt per difference, so a rejection does not cause a loop.
     private var _divSent as Number = 0;
 
     function syncDivider() as Void {
@@ -439,17 +439,17 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         }
     }
 
-    // Kolik vyzadanych nastaveni jeste neprislo. Odpoved na starsi cteni
-    // (pred zmenou v menu) by jinak prepinac na chvili vratila.
+    // How many requested settings have not arrived yet. A reply to an older read
+    // (before a change in the menu) would otherwise briefly revert the toggle.
     private var _setReq as Number = 0;
     private var _setReqT as Number = 0;
 
-    // Nechat si od Raysidu poslat nastaveni (paket 0x0a)
+    // Ask the Raysid to send its settings (packet 0x0a)
     function requestSettings() as Void {
         if (_device == null || !(_device as BluetoothLowEnergy.Device).isConnected()) {
             return;
         }
-        // Starsi nevyrizena cteni povazovat za ztracena
+        // Treat older unanswered reads as lost
         if (System.getTimer() - _setReqT > 3000) {
             _setReq = 0;
         }
@@ -482,19 +482,19 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         }
     }
 
-    // Poslat prikaz do Raysidu; false, kdyz neni pripojeny
+    // Send a command to the Raysid; false if not connected
     function send(cmd as ByteArray) as Boolean {
         if (_device == null || !(_device as BluetoothLowEnergy.Device).isConnected()
                 || characteristic(RaysidProtocol.writeCharUuid()) == null) {
             return false;
         }
         enqueue([:write, null, cmd]);
-        // Hned si nechat poslat nastaveni zpet, at je jiste, co Raysid prijal
+        // Immediately ask for the settings back, to be sure what the Raysid accepted
         requestSettings();
         return true;
     }
 
-    // --- fronta pozadavku ---
+    // --- request queue ---
 
     private function enqueue(item as Array) as Void {
         _queue.add(item);
@@ -521,8 +521,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             _busy = true;
             _busySince = System.getTimer();
         } catch (e) {
-            // Zapis odmitnut (napr. jeste bezi predchozi): polozku zahodit a
-            // dalsi zkusit az z onTick, at se nevyprazdni cela fronta i s pingem
+            // Write rejected (e.g. the previous one is still running): drop the item and
+            // try the next one only from onTick, so the whole queue including the ping is not drained
             _busy = true;
             _busySince = System.getTimer() - 3000;
         }
@@ -547,7 +547,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
         if (_state.showDebug) {
             _state.lastRaw = RaysidProtocol.toHex(value);
         }
-        // Ladeni: surova data do logu (hledame priznak pretizeni Raysidu)
+        // Debug: raw data to the log (looking for the Raysid overload flag)
         _parser.dbgLog = _state.showDebug;
         var m = _parser.feed(value);
         if (m != null) {
@@ -569,7 +569,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
                 WatchUi.requestUpdate();
             }
             if (m.hasKey(:btn)) {
-                requestSettings();   // tlacitkem zmenene nastaveni do menu Raysid
+                requestSettings();   // settings changed by the button, into the Raysid menu
             }
             if (m.hasKey(:ovl)) {
                 _state.devOvl = m[:ovl] as Boolean;
@@ -590,8 +590,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
                 _state.lastUpdate = now;
                 if (_state.doseRate != null && _state.cps != null) {
                     _state.updateOvl(now, _state.doseRate as Float, _state.cps as Float);
-                    // Pri pretizeni muze Raysid hlasit useknute (nizke) hodnoty:
-                    // alarmy dostanou aspon meze pretizeni, aby nezhasly
+                    // During overload the Raysid may report clipped (low) values:
+                    // alarms get at least the overload limits so they do not go off
                     var aDose = _state.doseRate as Float;
                     var aCps = _state.cps as Float;
                     if (_state.doseOvlOn) {
@@ -602,8 +602,8 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
                     }
                     var alarm = _alarms.evaluate(now, aDose, aCps);
                     _state.addSample(now, _state.doseRate as Float, _state.cps as Float, alarm);
-                    // Pri zapnute ladici obrazovce zapis mereni do logu hodinek
-                    // (GARMIN/APPS/LOGS/<jmeno prg>.TXT, musi existovat)
+                    // With the debug screen on, write measurements to the watch log
+                    // (GARMIN/APPS/LOGS/<prg name>.TXT, must exist)
                     if (_state.showDebug && now - _logT >= 2000) {
                         _logT = now;
                         System.println(now + ";" + (_state.cps as Float).format("%.1f") + ";" + (_state.doseRate as Float).format("%.2f") + ";" + (_state.cpsOvlOn ? 1 : 0) + (_state.doseOvlOn ? 1 : 0));

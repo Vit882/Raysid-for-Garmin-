@@ -1,6 +1,6 @@
 # Raysid Garmin – user guide
 
-The same text is shown on the watch under Help (Czech, English, Polish). This file is generated from `source/Tr.mc` by `tools/gen-navod.py`; do not edit it by hand.
+The same text is shown on the watch under Help (Czech, English, Polish). Also available in [Czech](USER-GUIDE-CS.md) and [Polish](USER-GUIDE-PL.md). This file is generated from `source/Tr.mc` by `tools/gen-guide.py`; do not edit it by hand.
 
 ## Controls
 

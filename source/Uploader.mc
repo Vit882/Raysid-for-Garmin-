@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application;
 import Toybox.Communications;
@@ -14,24 +14,24 @@ import Toybox.System;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
-// Odesilani zaznamenanych bodu na web Zhava mista. Hodinky nemaji vlastni
-// internet, pozadavky jdou pres Garmin Connect v telefonu. Posila se po
-// jednom bloku z fronty Recorderu (nejstarsi prvni); az server potvrdi,
-// blok se z hodinek smaze. Kdyz telefon neni v dosahu nebo server neodpovi,
-// zkusi se to znovu pri dalsim tiku. Format pozadavku popisuje
-// docs/zhavamista/navrh-endpointu.md.
+// Uploads recorded points to the Zhava mista website. The watch has no internet
+// of its own, requests go through Garmin Connect on the phone. One chunk at a time
+// is sent from the Recorder queue (oldest first); once the server confirms,
+// the chunk is deleted from the watch. If the phone is out of range or the server does not reply,
+// it is retried on the next tick. The request format is described in
+// docs/zhavamista/endpoint-proposal.md.
 class Uploader {
     const TICK_MS = 30000;
     const DEFAULT_URL = "https://www.zhavamista.cz/api/1.0/all/route-points";
 
-    var status as Symbol = :upOff;   // klic prekladu (Tr)
-    var lastCode as Number = 0;      // HTTP kod nebo chyba Connect IQ u :upErr
-    var sent as Number = 0;          // odeslanych bodu od spusteni aplikace
+    var status as Symbol = :upOff;   // translation key (Tr)
+    var lastCode as Number = 0;      // HTTP code or Connect IQ error for :upErr
+    var sent as Number = 0;          // points sent since app start
     private var _busy as Boolean = false;
     private var _busySince as Number = 0;
-    private var _lost as Number = 0;   // odpovedi po vyprseni, ktere jeste muzou prijit
-    const BUSY_MAX_MS = 120000;     // odpoved neprisla: povazovat za ztracenou
-    private var _sentId as String = "";   // trasa#davka prave odesilaneho bloku
+    private var _lost as Number = 0;   // replies after a timeout that may still arrive
+    const BUSY_MAX_MS = 120000;     // no reply came: treat it as lost
+    private var _sentId as String = "";   // route#batch of the chunk being sent
     private var _authFailed as Boolean = false;
     private var _timer as Timer.Timer = new Timer.Timer();
 
@@ -40,14 +40,14 @@ class Uploader {
 
     private var _running as Boolean = false;
 
-    // Bezi pri povolenem mapovani, nebo dokud zbyvaji neodeslane body
+    // Runs while mapping is enabled, or as long as unsent points remain
     function start() as Void {
         if (_running || !active()) {
             return;
         }
         _running = true;
         _timer.start(method(:onTick), TICK_MS, true);
-        // Pri startu overit spojeni s webem, je-li zadany klic
+        // On start, verify the connection to the web if a key is set
         if (apiKey().length() > 0 && verify == :vfIdle) {
             startVerify(null);
         }
@@ -65,8 +65,8 @@ class Uploader {
         return r.enabled || r.pending() > 0;
     }
 
-    // Uloziste smazano: odpoved na rozeslany blok uz nic nemaze. _busy
-    // zustava, dokud odpoved neprijde, at nejdou dva pozadavky najednou.
+    // Storage deleted: the reply to the chunk in flight no longer deletes anything. _busy
+    // stays set until the reply arrives, so two requests do not go out at once.
     function cancel() as Void {
         _sentId = "";
     }
@@ -78,7 +78,7 @@ class Uploader {
         }
     }
 
-    // Zmena nastaveni v Garmin Connect: novy klic zkusit hned (a overit)
+    // Settings changed in Garmin Connect: try the new key at once (and verify it)
     function settingsChanged() as Void {
         _authFailed = false;
         if (verify != :vfRunning) {
@@ -94,7 +94,7 @@ class Uploader {
         kick();
     }
 
-    // Vyber "Odesilani na web" v menu: zkusit hned znovu
+    // "Web upload" selected in the menu: retry immediately
     function retry() as Void {
         _authFailed = false;
         kick();
@@ -117,9 +117,9 @@ class Uploader {
         return currentKey();
     }
 
-    // --- overeni spojeni s webem ---
-    // Necha si od webu vratit profil uzivatele s danym klicem. Vysledek je
-    // ve verify (:vfIdle, :vfRunning, :vfOk, :vfBad, :vfNoPhone, :vfErr).
+    // --- verifying the connection to the web ---
+    // Asks the web to return the user profile for the given key. The result is
+    // in verify (:vfIdle, :vfRunning, :vfOk, :vfBad, :vfNoPhone, :vfErr).
     var verify as Symbol = :vfIdle;
     var verifyName as String = "";
     var verifyCode as Number = 0;
@@ -129,7 +129,7 @@ class Uploader {
         if (item != null || verify != :vfRunning) {
             _verifyItem = item;
         }
-        // Overeni uz bezi: pockat na nej (starsi odpoved by prepsala novejsi)
+        // Verification already running: wait for it (an older reply would overwrite a newer one)
         if (verify == :vfRunning) {
             return;
         }
@@ -166,7 +166,7 @@ class Uploader {
                 var user = (data as Dictionary)["user"];
                 var nick = user instanceof Dictionary ? (user as Dictionary)["nickname"] : null;
                 verifyName = nick instanceof String ? nick : "";
-                // Klic plati: pripadny zakaz odesilani po 401 zrusit
+                // The key is valid: lift any upload block set after a 401
                 _authFailed = false;
                 setVerify(:vfOk);
                 kick();
@@ -201,13 +201,13 @@ class Uploader {
         return v instanceof String && v.length() > 0 ? v : DEFAULT_URL;
     }
 
-    // Pokusi se odeslat nejstarsi blok, pokud nic jineho neprobiha
+    // Tries to send the oldest chunk if nothing else is in progress
     function kick() as Void {
         if (_busy && System.getTimer() - _busySince < BUSY_MAX_MS) {
             return;
         }
         if (_busy) {
-            _lost++;   // odpoved neprisla; kdyby prisla pozde, ignorovat ji
+            _lost++;   // no reply came; if it arrives late, ignore it
         }
         _busy = false;
         var r = recorder();
@@ -278,8 +278,8 @@ class Uploader {
     }
 
     function onResponse(code as Number, data as Dictionary or String or Null) as Void {
-        // Opozdena odpoved na pozadavek po vyprseni: nic nemazat (blok se
-        // poslal znovu a server davku podle id trasy a cisla nezdvoji)
+        // Late reply to a request after a timeout: delete nothing (the chunk was
+        // sent again and the server does not duplicate the batch by route id and number)
         if (_lost > 0) {
             _lost--;
             return;
@@ -294,27 +294,27 @@ class Uploader {
             }
             ok = st == null || (st instanceof String && st.equals("ok"));
         }
-        // Trvale odmitnuta davka (spatna data) by zablokovala celou frontu:
-        // zahodit ji a pokracovat dalsi. Jen u kodu, kterymi server odmita
-        // obsah davky; 404/405 apod. = spatna adresa nebo vypadek webu, data
-        // zustanou a zkusi se znovu (401/403 = klic, 408/429 = pozdeji).
+        // A permanently rejected batch (bad data) would block the whole queue:
+        // drop it and continue with the next one. Only for codes by which the server rejects
+        // the batch content; 404/405 etc. = wrong address or website outage, the data
+        // stays and is retried (401/403 = key, 408/429 = later).
         var reject = code == 400 || code == 409 || code == 413 || code == 422;
         if (ok || reject) {
-            // Web klic prijal: pripadne stare "klic nepřijat" uz neplati
+            // The web accepted the key: any old "key not accepted" no longer applies
             if (ok && verify == :vfBad) {
                 verify = :vfOk;
             }
             var r = recorder();
             var chunk = r.headChunk();
-            // Jen kdyz je na rade stale ten odeslany blok (mezitim mohlo byt
-            // uloziste smazane a na jeho miste je novy, neodeslany)
+            // Only if the sent chunk is still next in line (in the meantime storage
+            // may have been deleted and a new, unsent chunk is in its place)
             if (chunk != null && chunkId(chunk[1] as Array).equals(_sentId)) {
                 if (ok) {
                     sent += (chunk[0] as Array).size() / 5;
                 }
                 r.dropHead();
             }
-            // Dalsi blok hned, at se fronta vyprazdni
+            // Next chunk right away, so the queue drains
             kick();
             return;
         }
@@ -333,7 +333,7 @@ class Uploader {
         }
     }
 
-    // Popisek stavu pro menu
+    // Status label for the menu
     function label() as String {
         var t = Tr.t(status);
         if (status == :upErr) {

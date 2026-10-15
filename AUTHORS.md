@@ -1,6 +1,6 @@
-# Autoři
+# Authors
 
-- **Vít Cenek** (vitcenek@gmail.com) – autor, zadání, testování na hardwaru, správce webu Žhavá místa
-- **Claude (Anthropic)** – spoluautor kódu a dokumentace
+- **Vít Cenek** (vitcenek@gmail.com) – author, requirements, hardware testing, maintainer of the Žhavá místa website
+- **Claude (Anthropic)** – co-author of the code and documentation
 
-Kdo do projektu přispěje, připíše se sem. Podle licence GPL-3.0 musí každá šířená kopie nebo úprava zachovat tento seznam autorů a licenci.
+Anyone who contributes to the project adds themselves here. Under the GPL-3.0 license, every distributed copy or modification must keep this list of authors and the license.

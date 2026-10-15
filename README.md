@@ -1,119 +1,102 @@
 # Raysid Garmin
 
-Aplikace pro hodinky Garmin (Connect IQ), která se přes Bluetooth připojí k dozimetru **Raysid** a ukazuje dávkový příkon a count rate přímo na zápěstí. Umí alarmy, cvakání, graf a mapování radiace s GPS, včetně odesílání tras na web **[Žhavá místa](https://zhavamista.cz)**.
+A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over Bluetooth and shows the dose rate and count rate right on your wrist. It has alarms, clicks, a chart and GPS radiation mapping, including uploading routes to the Czech website **[Žhavá místa](https://zhavamista.cz)**.
 
-*English summary below.*
+**Česky / Polski:** the user guide is also available in Czech ([docs/USER-GUIDE-CS.md](docs/USER-GUIDE-CS.md)) and Polish ([docs/USER-GUIDE-PL.md](docs/USER-GUIDE-PL.md)).
 
 | | |
 |---|---|
-| Hodinky | Garmin fēnix 7X Pro (id `fenix7xpro`, vyvíjeno a testováno na fēnix 7X Pro Sapphire Solar); další podobné modely podle potřeby, viz [Podporované hodinky](#podporované-hodinky) |
-| Dozimetr | [Raysid](https://raysid.com) (BLE) |
-| Jazyky aplikace | čeština, angličtina, polština |
-| Verze | 1.1 (číslo buildu je v aplikaci v Nápověda → O aplikaci) |
-| Licence | [GPL-3.0-or-later](LICENSE) |
+| Watch | Garmin fēnix 7X Pro (id `fenix7xpro`; developed and tested on fēnix 7X Pro Sapphire Solar); other similar models as needed, see [Supported watches](#supported-watches) |
+| Dosimeter | [Raysid](https://raysid.com) (BLE) |
+| App languages | Czech, English, Polish |
+| Version | 1.1 (the build number is shown in the app under Help > About) |
+| License | [GPL-3.0-or-later](LICENSE) |
 
-## Co aplikace umí
+## Features
 
-- **Měření:** dávkový příkon v µSv/h (oranžově) a cps (modře), baterie Raysidu i hodinek. Hodnoty můžou být okamžité, nebo průměr za nastavený čas či počet měření.
-- **Graf** posledních 10, 20, 30 nebo 60 s s vlastní stupnicí pro každou veličinu a podbarvenými úseky alarmu.
-- **Přetížení:** při přetížení Raysidu (OVL) se místo hodnoty ukáže blikající OVL. Raysid ho hlásí sám; aplikace má navíc záložní odhad.
-- **Signalizace v hodinkách:** cvakání, vibrace a blikání svítilnou podle cps, s děličkou 1:N (1, 5, 10, 20, 50, 100, 250).
-- **Alarmy hodinek:**
-  - mez dávky, mez cps a prudký nárůst proti pozadí;
-  - zvlášť se nastaví zvuk, vibrace, probliknutí displeje a červená svítilna a délka alarmu.
-- **Nastavení přímo v Raysidu:** dělička, cvakání, alarm dávky a cps a sloučení děličky hodinek s Raysidem.
-- **Mapování:**
-  - GPS bod každých 5–15 m (nebo vlastní vzdálenost) s průměrem dávky a cps od předchozího bodu;
-  - obrazovka Mapování se statistikou;
-  - pauza a obnovení nahrávání;
-  - hlídání plného úložiště se slučováním bodů.
-- **Odesílání na Žhavá místa:** po blocích po 50 bodech přes telefon (Garmin Connect). API klíč se zadává přímo v hodinkách.
-- **Připojení:** historie Raysidů, „jen vybraný Raysid“ a volba, který kus vybrat, když je jich v dosahu víc.
-- **Nápověda v hodinkách** ve třech jazycích.
+- **Measurement:** dose rate in µSv/h (orange) and cps (blue), battery of the Raysid and the watch. Values can be instantaneous, or averaged over a set time or number of measurements.
+- **Chart** of the last 10, 20, 30 or 60 s with a separate scale for each quantity and shaded alarm sections.
+- **Overload:** when the Raysid is overloaded (OVL), a blinking OVL is shown instead of the value. The Raysid reports it itself; the app also has a fallback estimate.
+- **Signalling on the watch:** clicks, vibration and flashlight blinking according to cps, with a 1:N divider (1, 5, 10, 20, 50, 100, 250).
+- **Watch alarms:**
+  - dose limit, cps limit and rapid rise above background;
+  - sound, vibration, screen flash, red flashlight and alarm duration are set separately.
+- **Settings stored in the Raysid:** divider, clicks, dose and cps alarm, and linking the watch divider with the Raysid.
+- **Mapping:**
+  - a GPS point every 5–15 m (or a custom distance) with the average dose and cps since the previous point;
+  - Mapping screen with statistics;
+  - pause and resume recording;
+  - full storage handling with point merging.
+- **Upload to Žhavá místa:** in chunks of 50 points via the phone (Garmin Connect). The API key is entered directly on the watch.
+- **Connection:** Raysid history, "Only chosen Raysid" and a choice of which unit to pick when more than one is in range.
+- **Help on the watch** in three languages.
 
-Podrobný popis ovládání je v [uživatelském návodu](docs/NAVOD.md) ([English](docs/GUIDE-EN.md)).
+A detailed description of the controls is in the [user guide](docs/USER-GUIDE.md) ([Česky](docs/USER-GUIDE-CS.md), [Polski](docs/USER-GUIDE-PL.md)).
 
-## Instalace do hodinek
+## Installing on the watch
 
-Aplikace není v Connect IQ Store, instaluje se ručně (sideload):
+The app is not in the Connect IQ Store; it is installed manually (sideload):
 
-1. Stáhni hotový soubor `Raysid.prg` pro svůj model. Najdeš ho v [Releases](../../releases) nebo na webu Žhavá místa. Nebo si ho sestav podle [docs/SESTAVENI.md](docs/SESTAVENI.md).
-2. Připoj hodinky USB kabelem k počítači. Pozor, některé kabely jen nabíjejí.
-   - Windows: hodinky se ukážou jako přenosné zařízení.
-   - macOS: potřebuješ OpenMTP nebo Android File Transfer.
-   - Linux: MTP, třeba přes správce souborů KDE (kio-extras) nebo `mtp-tools`.
-3. Zkopíruj `Raysid.prg` do složky `GARMIN/APPS`.
-4. Odpoj hodinky. Aplikace „Raysid“ se objeví v seznamu aplikací.
-5. Zapni Raysid a zavři aplikaci Raysid v telefonu. Bluetooth spojení může mít Raysid jen s jedním zařízením.
+1. Download the ready-made `Raysid.prg` file for your model. You will find it in [Releases](../../releases) or on the Žhavá místa website. Or build it yourself following [docs/BUILDING.md](docs/BUILDING.md).
+2. Connect the watch to the computer with a USB cable. Note that some cables only charge.
+   - Windows: the watch appears as a portable device.
+   - macOS: you need OpenMTP or Android File Transfer.
+   - Linux: MTP, for example via the KDE file manager (kio-extras) or `mtp-tools`.
+3. Copy `Raysid.prg` into the `GARMIN/APPS` folder.
+4. Disconnect the watch. The "Raysid" app appears in the app list.
+5. Turn on the Raysid and close the Raysid app on your phone. The Raysid can have a Bluetooth connection with only one device.
 
-Při aktualizaci stačí soubor přepsat. Nastavení i neodeslané body zůstanou, pokud je nový build podepsaný stejným vývojářským klíčem.
+To update, just overwrite the file. Settings and unsent points are kept if the new build is signed with the same developer key.
 
-## Podporované hodinky
+## Supported watches
 
-Aplikace je napsaná pro kulaté hodinky s tlačítky podobné fēnixu: START, BACK, UP, DOWN a LIGHT, Bluetooth LE a GPS. Pro každý model je potřeba oficiální definice zařízení z Garmin SDK Manageru a kontrola rozložení na displeji, hlavně značek u tlačítek. Postup je v [docs/SESTAVENI.md](docs/SESTAVENI.md#8-podpora-dalšího-modelu-hodinek).
+The app is written for round button watches similar to the fēnix: START, BACK, UP, DOWN and LIGHT, Bluetooth LE and GPS. Each model needs the official device definition from the Garmin SDK Manager and a check of the on-screen layout, especially the button markers. The procedure is in [docs/BUILDING.md](docs/BUILDING.md#8-supporting-another-watch-model).
 
-## Dokumentace
+## Documentation
 
-| Soubor | Pro koho | Obsah |
+| File | For | Contents |
 |---|---|---|
-| [docs/NAVOD.md](docs/NAVOD.md) | uživatel | ovládání a všechny funkce (stejný text jako nápověda v hodinkách) |
-| [docs/SESTAVENI.md](docs/SESTAVENI.md) | vývojář | SDK, vývojářský klíč, sestavení, nahrání, logy, další modely, vydání verze |
-| [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | vývojář | moduly, tok dat, časovače, menu, uložená data, alarmy, OVL |
-| [docs/PROTOKOL-RAYSID.md](docs/PROTOKOL-RAYSID.md) | vývojář | Bluetooth protokol Raysidu, oficiální i odposlechnutá část |
-| [docs/MAPOVANI-A-ODESILANI.md](docs/MAPOVANI-A-ODESILANI.md) | vývojář | záznam bodů, úložiště, slučování, odesílání na web |
-| [docs/zhavamista/navrh-endpointu.md](docs/zhavamista/navrh-endpointu.md) | vývojář webu | rozhraní webu Žhavá místa pro příjem tras |
-| [AGENTS.md](AGENTS.md) | AI agent i člověk | jak na projektu pracovat: pravidla, omezení hodinek, konvence, kontrolní seznam |
-| [CHANGELOG.md](CHANGELOG.md) | všichni | historie verzí a buildů |
-| [docs/kontrola-2026-10-14.md](docs/kontrola-2026-10-14.md), [docs/test-ui-2026-10-15.md](docs/test-ui-2026-10-15.md) | vývojář | zprávy z revizí kódu a testu UI |
+| [docs/USER-GUIDE.md](docs/USER-GUIDE.md) | user | controls and all features (same text as the help on the watch) |
+| [docs/USER-GUIDE-CS.md](docs/USER-GUIDE-CS.md), [docs/USER-GUIDE-PL.md](docs/USER-GUIDE-PL.md) | user | the user guide in Czech and Polish |
+| [docs/BUILDING.md](docs/BUILDING.md) | developer | SDK, developer key, building, installing, logs, other models, releasing |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | developer | modules, data flow, timers, menu, stored data, alarms, OVL |
+| [docs/RAYSID-PROTOCOL.md](docs/RAYSID-PROTOCOL.md) | developer | Raysid Bluetooth protocol, both the official and the sniffed part |
+| [docs/MAPPING-AND-UPLOAD.md](docs/MAPPING-AND-UPLOAD.md) | developer | point recording, storage, merging, uploading to the website |
+| [docs/zhavamista/endpoint-proposal.md](docs/zhavamista/endpoint-proposal.md) | website developer | Žhavá místa website interface for receiving routes |
+| [AGENTS.md](AGENTS.md) | AI agent and human | how to work on the project: rules, watch limitations, conventions, checklist |
+| [CHANGELOG.md](CHANGELOG.md) | everyone | version and build history |
+| [docs/code-review-2026-10-14.md](docs/code-review-2026-10-14.md), [docs/ui-test-2026-10-15.md](docs/ui-test-2026-10-15.md) | developer | code review and UI test reports |
 
-## Rychlý start pro vývojáře
+## Quick start for developers
 
 ```bash
-# Connect IQ SDK a Java; definice zařízení fenix7xpro ze SDK Manageru
-# vlastní vývojářský klíč (nikdy ho necommituj):
+# Connect IQ SDK and Java; fenix7xpro device definition from the SDK Manager
+# your own developer key (never commit it):
 openssl genrsa -out developer_key.pem 4096
 openssl pkcs8 -topk8 -inform PEM -outform DER -in developer_key.pem -out developer_key.der -nocrypt
 
-# kontrola překladu (nejpřísnější typová kontrola)
+# compile check (strictest type checking)
 monkeyc -d fenix7xpro -f monkey.jungle -o /tmp/t.prg -y developer_key.der -l 3 -w
 
-# build k vydání (zvýší číslo buildu, zapíše source/BuildInfo.mc)
-TOOLCHAIN=/cesta/k/toolchainu bash build.sh fenix7xpro
+# release build (increments the build number, writes source/BuildInfo.mc)
+TOOLCHAIN=/path/to/toolchain bash build.sh fenix7xpro
 ```
 
-Podrobnosti jsou v [docs/SESTAVENI.md](docs/SESTAVENI.md).
+Details are in [docs/BUILDING.md](docs/BUILDING.md).
 
-## Soukromí
+## Privacy
 
-- Aplikace posílá data jen na web Žhavá místa, a to jen když je zapnuté mapování a zadaný API klíč. Jde o polohu, čas, dávku a cps bodů trasy.
-- API klíč se ukládá jen v hodinkách.
-- Ladicí log, pokud ho zapneš, se zapisuje jen do hodinek.
+- The app sends data only to the Žhavá místa website, and only when mapping is enabled and an API key is entered. The data are the position, time, dose and cps of route points.
+- The API key is stored only on the watch.
+- The debug log, if you turn it on, is written only to the watch.
 
-## Licence a autoři
+## License and authors
 
-Copyright © 2026 Vít Cenek a přispěvatelé ([AUTHORS.md](AUTHORS.md)). Spoluautor kódu: Claude (Anthropic).
+Copyright © 2026 Vít Cenek and contributors ([AUTHORS.md](AUTHORS.md)). Code co-author: Claude (Anthropic).
 
-Program je svobodný software pod licencí **GNU GPL verze 3 nebo pozdější** ([LICENSE](LICENSE)):
-- Můžeš ho volně používat, kopírovat a šířit, i upravený.
-- Při šíření musíš zachovat autory a licenci.
-- Upravené verze, které šíříš (včetně hotových `.prg`), musí zůstat open source pod stejnou licencí.
+This program is free software under the **GNU GPL version 3 or later** ([LICENSE](LICENSE)):
+- You may freely use, copy and distribute it, including modified versions.
+- When distributing, you must keep the authors and the license.
+- Modified versions you distribute (including ready-made `.prg` files) must remain open source under the same license.
 
-Raysid je produkt společnosti Raysid. Garmin, fēnix a Connect IQ jsou ochranné známky Garmin Ltd. Projekt s nimi není spojený.
-
----
-
-## English summary
-
-**Raysid Garmin** is a Garmin Connect IQ watch app (fēnix 7X Pro and similar round button watches) for the **Raysid** BLE dosimeter. It shows:
-- dose rate (µSv/h) and count rate (cps), with a chart and overload (OVL) detection;
-- watch alarms (dose, CPS, rapid rise) and click/vibration/flashlight signalling with a divider.
-
-It can change settings stored in the Raysid. It records GPS radiation maps and uploads them through the phone to the Czech community map **[Žhavá místa](https://zhavamista.cz)**. UI languages: Czech, English, Polish.
-
-Install by copying `Raysid.prg` to `GARMIN/APPS` over USB. Start with:
-- [docs/GUIDE-EN.md](docs/GUIDE-EN.md) (user guide)
-- [AGENTS.md](AGENTS.md) (how to work on the code; written for both humans and AI agents)
-
-The other technical documentation is in Czech.
-
-License: GPL-3.0-or-later. Authors: Vít Cenek, co-authored with Claude (Anthropic).
+Raysid is a product of Raysid. Garmin, fēnix and Connect IQ are trademarks of Garmin Ltd. This project is not affiliated with them.

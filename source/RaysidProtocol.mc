@@ -1,39 +1,39 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.BluetoothLowEnergy;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.Time;
 
-// Vse, co je specificke pro Raysid: UUID, ping a dekodovani paketu.
-// Zdroj: https://raysid.com/api/ (API.md, cps-doserate.py).
+// Everything specific to the Raysid: UUIDs, ping and packet decoding.
+// Source: https://raysid.com/api/ (API.md, cps-doserate.py).
 module RaysidProtocol {
-    const NAME_PREFIX = "raysid";       // porovnava se bez ohledu na velikost pismen
-    // Raysid se odpoji, kdyz 10 s nedostane ping; posilame ho s rezervou.
+    const NAME_PREFIX = "raysid";       // compared case-insensitively
+    // The Raysid disconnects if it gets no ping for 10 s; we send it with a margin.
     const POLL_MS = 4000;
     const WRITE_TYPE = BluetoothLowEnergy.WRITE_TYPE_WITH_RESPONSE;
-    // Hodnota "DR" z paketu 0x17 je v uR/h. 1 uSv/h ~ 100 uR/h.
-    // Pokud by se hodnota na hodinkach lisila od displeje Raysidu 100x, zmen na 1.0.
+    // The "DR" value from packet 0x17 is in uR/h. 1 uSv/h ~ 100 uR/h.
+    // If the value on the watch differs from the Raysid display by 100x, change to 1.0.
     const UR_PER_USV = 100.0;
-    const ACTIVE_TAB = 0;               // 0 = hlavni obrazovka (telemetrie)
+    const ACTIVE_TAB = 0;               // 0 = main screen (telemetry)
 
     function serviceUuid() as BluetoothLowEnergy.Uuid {
         return BluetoothLowEnergy.stringToUuid("49535343-fe7d-4ae5-8fa9-9fafd205e455");
     }
 
-    // RX: zarizeni -> hodinky (notify)
+    // RX: device -> watch (notify)
     function notifyCharUuid() as BluetoothLowEnergy.Uuid {
         return BluetoothLowEnergy.stringToUuid("49535343-1e4d-4bd9-ba61-23c647249616");
     }
 
-    // TX: hodinky -> zarizeni (write)
+    // TX: watch -> device (write)
     function writeCharUuid() as BluetoothLowEnergy.Uuid {
         return BluetoothLowEnergy.stringToUuid("49535343-8841-43f4-a8d4-ecbe34729bb3");
     }
@@ -65,14 +65,14 @@ module RaysidProtocol {
         return false;
     }
 
-    // Prikazy poslane hned po zapnuti notifikaci.
+    // Commands sent right after enabling notifications.
     function initCommands() as Array<ByteArray> {
         return settingsCommands();
     }
 
-    // Vyzadani nastaveni presne jako oficialni aplikace: ping s obrazovkou 9
-    // (nastaveni), 0x1f 00, 0x1b 01 (Raysid odpovi paketem 0x0a), 0x1b 02
-    // a zpet ping s hlavni obrazovkou.
+    // Request settings exactly like the official app: ping with screen 9
+    // (settings), 0x1f 00, 0x1b 01 (the Raysid replies with packet 0x0a), 0x1b 02
+    // and back to a ping with the main screen.
     const SETTINGS_TAB = 9;
 
     function settingsCommands() as Array<ByteArray> {
@@ -80,7 +80,7 @@ module RaysidProtocol {
             command([0x1b, 0x02]b), ping(ACTIVE_TAB)];
     }
 
-    // Prikaz posilany kazdou POLL_MS.
+    // Command sent every POLL_MS.
     function pollCommand() as ByteArray? {
         return ping(ACTIVE_TAB);
     }
@@ -92,14 +92,14 @@ module RaysidProtocol {
             (t >> 24) & 0xFF, (t >> 16) & 0xFF, (t >> 8) & 0xFF, t & 0xFF]b);
     }
 
-    // Nastaveni primo v Raysidu. Neni v API.md, odposlechnuto z oficialni
-    // aplikace (btsnoop 14. 10. 2026): 0x16 N = delicka zvuku 1:N
-    // (1, 5, 10, 20, 50, 100, 250; 1 neodposlechnuto), 0x03 X = zvukova signalizace.
+    // Settings stored in the Raysid itself. Not in API.md, sniffed from the official
+    // app (btsnoop 14. 10. 2026): 0x16 N = sound divider 1:N
+    // (1, 5, 10, 20, 50, 100, 250; 1 not sniffed), 0x03 X = sound signaling.
     function dividerCommand(n as Number) as ByteArray {
         return command([0x16, n & 0xFF]b);
     }
 
-    // Alarmy primo v Raysidu: 0x18 = alarm davkoveho prikonu, 0x17 = alarm cps
+    // Alarms in the Raysid itself: 0x18 = dose rate alarm, 0x17 = cps alarm
     function doseAlarmCommand(on as Boolean) as ByteArray {
         return command([0x18, on ? 0x01 : 0x00]b);
     }
@@ -108,12 +108,12 @@ module RaysidProtocol {
         return command([0x17, on ? 0x01 : 0x00]b);
     }
 
-    // 0x03 01 zvuk (kliky) zapne, 0x03 00 vypne
+    // 0x03 01 turns sound (clicks) on, 0x03 00 turns it off
     function soundCommand(on as Boolean) as ByteArray {
         return command([0x03, on ? 0x01 : 0x00]b);
     }
 
-    // Ramec prikazu: [0xFF] [CRC2] [0xEE] [CRC1: 4B BE] [payload] [TotalSize]
+    // Command frame: [0xFF] [CRC2] [0xEE] [CRC1: 4B BE] [payload] [TotalSize]
     function command(payload as ByteArray) as ByteArray {
         var c1 = crc1(payload);
         var inner = [0xEE,
@@ -130,7 +130,7 @@ module RaysidProtocol {
         return out;
     }
 
-    // Soucet 4bajtovych little-endian bloku, modulo 2^32.
+    // Sum of 4-byte little-endian chunks, modulo 2^32.
     function crc1(data as ByteArray) as Long {
         var crc = 0l;
         for (var i = 0; i < data.size(); i += 4) {
@@ -143,8 +143,8 @@ module RaysidProtocol {
         return crc & 0xFFFFFFFFl;
     }
 
-    // XOR 3bajtovych bloku. API.md je popisuje little-endian, cps-doserate.py
-    // big-endian; nevime, ktere plati pro tvuj firmware, tak prijimame obe.
+    // XOR of 3-byte chunks. API.md describes them as little-endian, cps-doserate.py
+    // as big-endian; we do not know which applies to your firmware, so we accept both.
     function checksumOk(buf as ByteArray, start as Number, len as Number) as Boolean {
         var le = 0;
         var be = 0;
@@ -161,7 +161,7 @@ module RaysidProtocol {
         return rx != 0 && (rx == le || rx == be);
     }
 
-    // Komprese 16bitovych hodnot: v / 6000 je pocet nasobeni deseti.
+    // 16-bit value compression: v / 6000 is the number of multiplications by ten.
     function unpackValue(v as Number) as Float {
         var res = (v % 6000).toFloat();
         for (var i = 0; i < v / 6000; i++) {
@@ -179,25 +179,25 @@ module RaysidProtocol {
     }
 }
 
-// Sklada pakety z notifikaci (jeden paket muze prijit ve vice kusech)
-// a dekoduje je: [Size] [Type] [Payload] [Checksum3: 3B]
-// Typy paketu videne z Raysidu (pro rozpoznani oddelovace)
+// Assembles packets from notifications (one packet may arrive in several pieces)
+// and decodes them: [Size] [Type] [Payload] [Checksum3: 3B]
+// Packet types seen from the Raysid (for detecting the delimiter)
 const KNOWN_TYPES = [0x02, 0x03, 0x06, 0x0a, 0x17, 0x18, 0x21, 0x22, 0x23];
 
 class RaysidParser {
     private var _buf as ByteArray = []b;
-    private var _delim as Number? = null;     // oddelovac mezi pakety (videno 0x84, 0x10)
+    private var _delim as Number? = null;     // delimiter between packets (seen 0x84, 0x10)
     private var _candidates as Dictionary = {};
     private var _afterPacket as Boolean = false;
-    // Pozice v bufferu je zacatek paketu (po paketu nebo oddelovaci). Po smeti
-    // ne: pak se se znamym oddelovacem preskoci rovnou na dalsi oddelovac.
+    // Buffer position is the start of a packet (after a packet or delimiter). Not after
+    // junk: then, with a known delimiter, we skip straight to the next delimiter.
     private var _sync as Boolean = true;
-    private var _noPkt as Number = 0;          // notifikaci bez platneho paketu
-    const JUNK_MAX = 120;      // bajtu se zkouskou souctu za notifikaci (watchdog)
-    const RELEARN_AFTER = 10;  // tolik notifikaci bez paketu: oddelovac se uci znovu
-    var typeCounts as Dictionary<Number, Number> = {};   // pocty paketu podle typu (debug)
-    var dbgLog as Boolean = false;   // ladici log vybranych paketu (println)
-    private var _dbgLast as Dictionary = {};   // posledni zapsany obsah podle typu
+    private var _noPkt as Number = 0;          // notifications without a valid packet
+    const JUNK_MAX = 120;      // bytes tried with a checksum per notification (watchdog)
+    const RELEARN_AFTER = 10;  // this many notifications without a packet: relearn the delimiter
+    var typeCounts as Dictionary<Number, Number> = {};   // packet counts by type (debug)
+    var dbgLog as Boolean = false;   // debug log of selected packets (println)
+    private var _dbgLast as Dictionary = {};   // last logged content by type
 
     function initialize() {}
 
@@ -206,12 +206,12 @@ class RaysidParser {
         _afterPacket = false;
         _sync = true;
         _noPkt = 0;
-        // Po restartu Raysidu se oddelovac muze zmenit (videno 0x84 -> 0x10)
+        // After a Raysid restart the delimiter may change (seen 0x84 -> 0x10)
         _delim = null;
         _candidates = {};
     }
 
-    // Vrati {:cps, :doseRate (uSv/h), :battery, :temp}, jen klice, ktere v datech byly; nebo null.
+    // Returns {:cps, :doseRate (uSv/h), :battery, :temp}, only the keys present in the data; or null.
     function feed(value as ByteArray) as Dictionary? {
         _buf.addAll(value);
         if (_buf.size() > 1024) {
@@ -220,25 +220,25 @@ class RaysidParser {
         }
         var out = {};
         var pos = 0;
-        var junk = 0;   // bajtu preskocenych se zkouskou souctu
+        var junk = 0;   // bytes skipped while trying the checksum
         var found = false;
         while (pos < _buf.size()) {
-            // Smeti (spatna delka/soucet): nezkouset donekonecna kazdy bajt,
-            // jinak hrozi watchdog; zahodit a cekat na dalsi data
+            // Junk (bad length/checksum): do not keep trying every byte forever,
+            // otherwise the watchdog may fire; drop it and wait for more data
             if (junk > JUNK_MAX) {
                 pos = _buf.size();
                 _sync = false;
                 break;
             }
             var b = _buf[pos];
-            // Oddelovac pred dalsim paketem
+            // Delimiter before the next packet
             if (_delim != null && b == _delim && (_afterPacket || !_sync)) {
                 pos++;
                 _afterPacket = false;
                 _sync = true;
                 continue;
             }
-            // Po smeti se znamym oddelovacem: preskocit az k nemu (bez souctu)
+            // After junk with a known delimiter: skip up to it (no checksum)
             if (_delim != null && !_sync) {
                 pos++;
                 continue;
@@ -253,10 +253,10 @@ class RaysidParser {
                 found = true;
                 continue;
             }
-            // Je bajt oddelovac? Hned za nim zacina platny paket.
+            // Is the byte a delimiter? A valid packet starts right after it.
             if (pos + 1 < _buf.size()) {
                 var l2 = _buf[pos + 1];
-                // Soucet jen u znameho typu paketu (setri cas na smeti)
+                // Checksum only for a known packet type (saves time on junk)
                 if (l2 >= 4 && pos + 1 + l2 <= _buf.size() && KNOWN_TYPES.indexOf(_buf[pos + 2]) >= 0
                         && RaysidProtocol.checksumOk(_buf, pos + 1, l2)) {
                     learnDelimiter(b);
@@ -266,14 +266,14 @@ class RaysidParser {
                 }
             }
             if (_sync && len >= 4 && pos + len > _buf.size()) {
-                break; // cekame na zbytek paketu
+                break; // waiting for the rest of the packet
             }
             pos++;
             junk++;
             _sync = false;
         }
         _buf = pos >= _buf.size() ? []b : _buf.slice(pos, null);
-        // Oddelovac se zmenil (restart Raysidu bez odpojeni): naucit znovu
+        // The delimiter changed (Raysid restart without disconnecting): relearn it
         _noPkt = found ? 0 : _noPkt + 1;
         if (_noPkt > RELEARN_AFTER && _delim != null) {
             _delim = null;
@@ -295,8 +295,8 @@ class RaysidParser {
         }
     }
 
-    // Do logu jen udalosti a zmeny: 0x17 pri zmene priznaku pretizeni,
-    // 0x22/0x18/0x23 vzdy, ostatni krome spektra a periodickych stavu pri zmene
+    // Log only events and changes: 0x17 when the overload flag changes,
+    // 0x22/0x18/0x23 always, others except spectrum and periodic status on change
     private function logPacket(type as Number, p as ByteArray) as Void {
         if (type == 0x21 || type == 0x02 || type == 0x06) {
             return;
@@ -319,7 +319,7 @@ class RaysidParser {
             logPacket(type, p);
         }
         if (type == 0x17) {
-            // Bloky [RangeType] [LSB] [MSB]; 0 = CPS, 1 = davkovy prikon (uR/h)
+            // Chunks [RangeType] [LSB] [MSB]; 0 = CPS, 1 = dose rate (uR/h)
             var off = 2;
             while (off + 2 < size - 3) {
                 var range = p[off];
@@ -331,25 +331,25 @@ class RaysidParser {
                 }
                 off += 3;
             }
-            // Bajt pred kontrolnim souctem = priznak pretizeni Raysidu (01 pri
-            // cervene blikajici LED, odposlechnuto 14. 10. 2026)
+            // The byte before the checksum = Raysid overload flag (01 when the
+            // red LED is blinking, sniffed 14. 10. 2026)
             if ((size - 5) % 3 == 1) {
                 out[:ovl] = p[size - 4] != 0;
             }
         } else if (type == 0x18) {
-            // Akce tlacitka na Raysidu: [funkce, novy stav]; 02 = cvakani,
-            // 03 = alarmy (odposlechnuto 14. 10. 2026)
+            // Raysid button action: [function, new state]; 02 = clicks,
+            // 03 = alarms (sniffed 14. 10. 2026)
             out[:btn] = true;
         } else if (type == 0x0a && size >= 14) {
-            // Nastaveni Raysidu (odposlechnuto 14. 10. 2026): [4] delicka 1:N,
-            // [6] zvuk kliku, [10] alarmy: bit 0x10 davkovy prikon, 0x01 cps
+            // Raysid settings (sniffed 14. 10. 2026): [4] divider 1:N,
+            // [6] click sound, [10] alarms: bit 0x10 dose rate, 0x01 cps
             out[:devDiv] = p[4];
             out[:devSound] = p[6] != 0;
             out[:devDoseAl] = (p[10] & 0x10) != 0;
             out[:devCpsAl] = (p[10] & 0x01) != 0;
         } else if (type == 0x02 && size >= 9) {
             out[:temp] = (p[2] | (p[3] << 8)) / 10.0 - 100.0;
-            // API.md uvadi deleni 10, skutecny Raysid ale posila primo procenta
+            // API.md says divide by 10, but the real Raysid sends the percentage directly
             out[:battery] = (p[4] | (p[5] << 8)).toFloat();
         }
     }

@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application;
 import Toybox.Application.Storage;
@@ -14,13 +14,13 @@ import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
 
-// Sdileny stav mereni. Aktualizuje ho BleManager, kresli RaysidView.
+// Shared measurement state. Updated by BleManager, drawn by RaysidView.
 function clamp(v as Number, lo as Number, hi as Number) as Number {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
-// Zapis do uloziste aplikace, ktery pri plnem ulozisti nespadne
-// (vrati false; volajici muze nahravani zastavit)
+// Write to app storage that does not crash when storage is full
+// (returns false; the caller may stop recording)
 function put(key as String, value as Storage.ValueType) as Boolean {
     try {
         Storage.setValue(key, value);
@@ -31,83 +31,83 @@ function put(key as String, value as Storage.ValueType) as Boolean {
 }
 
 class RaysidState {
-    var status as Symbol = :stStart;   // klic prekladu (Tr), preklada se az pri kresleni
-    var statusArg as String = "";       // pripadny kod chyby za stavem
+    var status as Symbol = :stStart;   // translation key (Tr), translated only when drawing
+    var statusArg as String = "";       // optional error code after the status
     var deviceName as String? = null;
     var doseRate as Float? = null;     // uSv/h
-    var cps as Float? = null;          // impulzy za sekundu
-    var battery as Float? = null;      // baterie Raysidu v %
-    // Nastaveni v Raysidu podle jeho posledniho hlaseni (null = zatim neprislo)
+    var cps as Float? = null;          // counts per second
+    var battery as Float? = null;      // Raysid battery in %
+    // Settings in the Raysid per its last report (null = not received yet)
     var devDiv as Number? = null;
     var devSound as Boolean? = null;
     var devDoseAl as Boolean? = null;
     var devCpsAl as Boolean? = null;
     var lastUpdate as Number? = null;  // System.getTimer() ms
     var packets as Number = 0;
-    var lastRaw as String = "";        // hex posledniho paketu (debug)
+    var lastRaw as String = "";        // hex of the last packet (debug)
     var showDebug as Boolean = false;
-    var devOvl as Boolean? = null;     // priznak pretizeni od Raysidu (null = neprisel)
+    var devOvl as Boolean? = null;     // overload flag from the Raysid (null = not received)
 
-    // Nastaveni (ukladaji se mezi spustenimi)
-    var backlight as Boolean = false;  // displej sviti po celou dobu behu
-    var sound as Boolean = false;      // pipani podle cps
-    var led as Boolean = false;        // bliknuti svitilnou podle cps
-    var divider as Number = 10;        // 1 pipnuti na N impulzu
-    var divLink as Boolean = false;    // delicka hodinek svazana s delickou Raysidu
-    var overload as Boolean = false;   // pipak docasne vypnut kvuli vysokemu cps
-    var vibeOver as Boolean = false;   // vibrace k impulzum nad limitem motoru (4/s)
-    var chartSec as Number = 30;       // delka grafu v sekundach (10 az 60)
-    var swapMain as Boolean = false;   // hlavni obrazovka: cps velke nahore, davka pod nim
-    var vibrate as Boolean = false;    // vibrace k impulzum (jen do VIBE_MAX_RATE za sekundu)
-    var alarmSound as Boolean = true;  // ton u alarmu
-    var alarmVibe as Boolean = true;   // vibrace u alarmu
-    var alarmFlash as Boolean = true;  // probliknuti obrazovky u alarmu
-    var alarmRedLed as Boolean = true; // cervena svitilna behem alarmu (pri zapnutem blikani)
-    var alarmLen as Number = 1;        // delka alarmu: 0 kratky, 1 stredni, 2 dlouhy
-    var alarmsOn as Boolean = true;    // hlavni vypinac vsech alarmu
+    // Settings (persisted between launches)
+    var backlight as Boolean = false;  // display stays lit the whole time the app runs
+    var sound as Boolean = false;      // beeping by cps
+    var led as Boolean = false;        // flashlight blink by cps
+    var divider as Number = 10;        // 1 beep per N counts
+    var divLink as Boolean = false;    // watch divider linked to the Raysid divider
+    var overload as Boolean = false;   // beeper temporarily off due to high cps
+    var vibeOver as Boolean = false;   // vibration on counts above the motor limit (4/s)
+    var chartSec as Number = 30;       // chart length in seconds (10 to 60)
+    var swapMain as Boolean = false;   // main screen: cps large on top, dose below it
+    var vibrate as Boolean = false;    // vibration on counts (only up to VIBE_MAX_RATE per second)
+    var alarmSound as Boolean = true;  // alarm tone
+    var alarmVibe as Boolean = true;   // alarm vibration
+    var alarmFlash as Boolean = true;  // screen flash on alarm
+    var alarmRedLed as Boolean = true; // red flashlight during an alarm (when blinking is on)
+    var alarmLen as Number = 1;        // alarm length: 0 short, 1 medium, 2 long
+    var alarmsOn as Boolean = true;    // master switch for all alarms
     var doseOn as Boolean = false;
-    var alarmDose as Float = 1.0;      // mez alarmu davky v uSv/h
+    var alarmDose as Float = 1.0;      // dose alarm threshold in uSv/h
     var cpsOn as Boolean = false;
-    var alarmCps as Number = 1000;     // mez alarmu cps
+    var alarmCps as Number = 1000;     // cps alarm threshold
     var softOn as Boolean = false;
-    var softPct as Number = 50;        // citlivost hlidani narustu v % nad pozadim
+    var softPct as Number = 50;        // rise detection sensitivity in % above background
 
     var hardAlarm as Boolean = false;
     var softAlarm as Boolean = false;
-    var flashUntil as Number = 0;      // do kdy problikava obrazovka (System.getTimer)
+    var flashUntil as Number = 0;      // until when the screen flashes (System.getTimer)
     var flashColor as Number = 0xFF0000;
 
-    // Probihajici signalizace alarmu: zbyvajici davky, druh (1 mekky, 2 pevny), cas dalsi davky
+    // Alarm signaling in progress: remaining bursts, kind (1 soft, 2 hard), time of the next burst
     var seqLeft as Number = 0;
     var seqKind as Number = 0;
     var seqNext as Number = 0;
 
-    var page as Number = 0;            // 0 = hodnoty, 1 = graf, 2 = mapovani
-    var intervalMs as Float? = null;   // prumerny interval mezi merenimi z Raysidu
+    var page as Number = 0;            // 0 = values, 1 = chart, 2 = mapping
+    var intervalMs as Float? = null;   // average interval between measurements from the Raysid
     var lastIntervalMs as Number? = null;
-    var ovl as Boolean = false;       // nektera velicina v OVL (body se nezapisuji)
-    var cpsOvlOn as Boolean = false;  // cps v OVL: drzi, dokud davka neklesne pod OVL_RESET_DOSE
-    var doseOvlOn as Boolean = false; // davka nad OVL_DOSE: drzi, dokud neklesne pod OVL_DOSE_RESET
-    // Prumerovani zobrazenych hodnot: 0 okamzite, 1 podle casu, 2 podle poctu mereni.
-    // Uklada se jen surove mereni; prumer se pocita pri kresleni, takze zmena
-    // nastaveni se hned projevi i v celem grafu. Alarmy, cvakani a body
-    // mapovani pouzivaji vzdy okamzite hodnoty.
+    var ovl as Boolean = false;       // some quantity is in OVL (points are not written)
+    var cpsOvlOn as Boolean = false;  // cps in OVL: holds until the dose drops below OVL_RESET_DOSE
+    var doseOvlOn as Boolean = false; // dose above OVL_DOSE: holds until it drops below OVL_DOSE_RESET
+    // Averaging of displayed values: 0 instant, 1 by time, 2 by number of measurements.
+    // Only raw measurements are stored; the average is computed when drawing, so a change
+    // of the setting applies immediately to the whole chart too. Alarms, clicks and mapping
+    // points always use instant values.
     var avgMode as Number = 0;
     var avgSec as Number = 10;
     var avgN as Number = 5;
-    var smDose as Array<Float> = new Array<Float>[HIST];   // prumerovane hodnoty pro graf
+    var smDose as Array<Float> = new Array<Float>[HIST];   // averaged values for the chart
     var smCps as Array<Float> = new Array<Float>[HIST];
-    var typeInfo as String = "";       // pocty prijatych typu paketu (debug)
+    var typeInfo as String = "";       // counts of received packet types (debug)
 
-    // Historie pro graf: kruhovy buffer, plni se vzdy (je levny),
-    // kresli se jen kdyz je graf na obrazovce.
-    // 600 mereni: pri ~0,25 s mezi merenimi asi 2,5 min, na 60s graf staci
+    // History for the chart: ring buffer, always filled (it is cheap),
+    // drawn only when the chart is on screen.
+    // 600 measurements: at ~0.25 s between measurements about 2.5 min, enough for a 60 s chart
     const HIST = 600;
     var histT as Array<Number> = new Array<Number>[HIST];
     var histDose as Array<Float> = new Array<Float>[HIST];
     var histCps as Array<Float> = new Array<Float>[HIST];
-    var histAlarm as Array<Number> = new Array<Number>[HIST];   // 0 nic, 1 mekky, 2 pevny alarm
-    var histHead as Number = 0;        // index dalsiho zapisu
+    var histAlarm as Array<Number> = new Array<Number>[HIST];   // 0 none, 1 soft, 2 hard alarm
+    var histHead as Number = 0;        // index of the next write
     var histCount as Number = 0;
 
     function initialize() {
@@ -116,7 +116,7 @@ class RaysidState {
         led = load("led", led) as Boolean;
         divider = load("div", divider) as Number;
         divLink = load("dvL", divLink) as Boolean;
-        // Starsi vlastni hodnota: nejblizsi z nabidky (1, 5, 10, 20, 50, 100, 250)
+        // Older custom value: the nearest from the offered list (1, 5, 10, 20, 50, 100, 250)
         var best = 1;
         for (var i = 0; i < DIVIDERS.size(); i++) {
             var d = DIVIDERS[i] as Number;
@@ -132,18 +132,18 @@ class RaysidState {
         avgMode = load("avM", avgMode) as Number;
         avgSec = load("avS", avgSec) as Number;
         avgN = load("avN", avgN) as Number;
-        // Poskozena nebo stara hodnota by shodila menu (index mimo pole)
+        // A damaged or old value would crash the menu (index out of range)
         avgMode = clamp(avgMode, 0, 2);
         avgSec = clamp(avgSec, 2, 60);
         avgN = clamp(avgN, 2, 30);
-        // Starsi verze mely i jine rozsahy; povolene jsou 10 az 60 s
+        // Older versions also had other ranges; 10 to 60 s is allowed
         if (chartSec > 60) {
             chartSec = 60;
         } else if (chartSec < 10) {
             chartSec = 10;
         }
         vibrate = load("vib", vibrate) as Boolean;
-        // Starsi verze mely 0 = vypnuto primo v hodnote; prevedeme na vypinace
+        // Older versions had 0 = off directly in the value; we convert it to switches
         var sl = load("sl", 2) as Number;
         softOn = load("slOn", sl > 0) as Boolean;
         softPct = clamp(load("sp", [50, 30, 50, 100][sl < 0 || sl > 3 ? 0 : sl] as Number) as Number, 10, 300);
@@ -152,7 +152,7 @@ class RaysidState {
         alarmFlash = load("aFl", alarmFlash) as Boolean;
         alarmRedLed = load("aRed", alarmRedLed) as Boolean;
         alarmLen = clamp(load("aLen", alarmLen) as Number, 0, 2);
-        // Uklid zrusene zalozni logu z buildu 68
+        // Clean up the removed log backup from build 68
         if (Storage.getValue("lgI") != null) {
             for (var i = 0; i < 20; i++) {
                 Storage.deleteValue("lg" + i);
@@ -167,13 +167,13 @@ class RaysidState {
         doseOn = load("adOn", ad != null && adv > 0.0) as Boolean;
         alarmDose = adv > 0.0 ? (adv > ALARM_DOSE_MAX ? ALARM_DOSE_MAX : (adv < 0.05 ? 0.05 : adv)) : 1.0;
         alarmsOn = load("aOn", alarmsOn) as Boolean;
-        // Jazyk: pri prvnim spusteni podle jazyka hodinek (cestina, polstina, jinak anglictina)
+        // Language: on first launch by the watch language (Czech, Polish, otherwise English)
         var sysLang = System.getDeviceSettings().systemLanguage;
         var defLang = sysLang == System.LANGUAGE_CES ? 0 : (sysLang == System.LANGUAGE_POL ? 2 : 1);
         Tr.lang = clamp(load("lang", defLang) as Number, 0, 2);
     }
 
-    // Skutecne platne meze (0 = alarm neaktivni)
+    // Actually effective thresholds (0 = alarm inactive)
     function doseLimit() as Float {
         return alarmsOn && doseOn ? alarmDose : 0.0;
     }
@@ -182,12 +182,12 @@ class RaysidState {
         return alarmsOn && cpsOn ? alarmCps : 0;
     }
 
-    // Pomerny narust nad pozadim pro mekky alarm, 0 = vypnuto
+    // Relative rise above background for the soft alarm, 0 = off
     function softFactor() as Float {
         return alarmsOn && softOn ? softPct / 100.0 : 0.0;
     }
 
-    // Zahaji signalizaci alarmu; pocet davek podle nastavene delky
+    // Starts alarm signaling; number of bursts by the set length
     function startAlarm(kind as Number, now as Number) as Void {
         var bursts = [1, 3, 8];
         seqKind = kind;
@@ -206,15 +206,15 @@ class RaysidState {
         }
     }
 
-    // Prumer davky a cps k mereni na indexu i historie: podle casu (mereni za
-    // poslednich avgSec s) nebo podle poctu (poslednich avgN mereni)
-    // capMs omezuje okno prumeru (v grafu podle jeho delky)
+    // Average dose and cps for the measurement at history index i: by time (measurements in
+    // the last avgSec s) or by count (the last avgN measurements)
+    // capMs limits the averaging window (in the chart by its length)
     function smoothAt(i as Number, capMs as Number) as Array<Float> {
         var t0 = histT[i] as Number;
         var sd = 0.0;
         var sc = 0.0;
         var n = 0;
-        var back = (histHead - 1 - i + HIST) % HIST;   // kolik mereni je novejsich
+        var back = (histHead - 1 - i + HIST) % HIST;   // how many measurements are newer
         for (var k = 0; back + k < histCount; k++) {
             var j = (i - k + HIST) % HIST;
             var age = t0 - (histT[j] as Number);
@@ -228,15 +228,15 @@ class RaysidState {
         return [sd / n, sc / n] as Array<Float>;
     }
 
-    // Naplni smDose/smCps pro mereni novejsi nez tMin. Klouzave okno se
-    // posouva jednim pruchodem (kazde mereni se pricte a odecte jen jednou),
-    // aby kresleni grafu nevycerpalo casovy limit hodinek (watchdog).
+    // Fills smDose/smCps for measurements newer than tMin. The sliding window
+    // moves in a single pass (each measurement is added and subtracted only once),
+    // so chart drawing does not exhaust the watch time limit (watchdog).
     function smooth(tMin as Number, capMs as Number) as Void {
         var lim = capMs;
         if (avgMode == 1 && avgSec * 1000 < lim) {
             lim = avgSec * 1000;
         }
-        // Kolik mereni je potreba: okno grafu plus delka prumeru pred nim
+        // How many measurements are needed: the chart window plus the averaging length before it
         var m = 0;
         while (m < histCount && (histT[(histHead - 1 - m + HIST) % HIST] as Number) >= tMin - lim) {
             m++;
@@ -244,7 +244,7 @@ class RaysidState {
         var sd = 0.0;
         var sc = 0.0;
         var n = 0;
-        var kl = m - 1;   // nejstarsi mereni v okne
+        var kl = m - 1;   // oldest measurement in the window
         for (var k = m - 1; k >= 0; k--) {
             var i = (histHead - 1 - k + HIST) % HIST;
             var t = histT[i] as Number;
@@ -275,26 +275,26 @@ class RaysidState {
         }
     }
 
-    // Spicka cps (a davka v ni) pred zahlcenim, k ni se porovnava navrat
+    // Peak cps (and dose at it) before saturation; the recovery is compared to it
     private var _ovlPeak as Float = 0.0;
     private var _ovlPeakDose as Float = 0.0;
-    private var _ovlOk as Number = 0;     // kolik mereni po sobe vypada jako navrat
+    private var _ovlOk as Number = 0;     // how many consecutive measurements look like a recovery
     private var _ovlPrevDose as Float = 0.0;
     private var _ovlPrevCps as Float = 0.0;
     private var _ovlSame as Number = 0;
-    private var _pk as Float = 0.0;       // spicka z posledniho cpsDropped
+    private var _pk as Float = 0.0;       // peak from the last cpsDropped
     private var _pkD as Float = 0.0;
 
-    // Zapne OVL pri prekroceni meze nebo pri prudkem poklesu cps, ktery
-    // davka nenasleduje. Vypne ho navrat pres spicku (cps zase vystoupaly
-    // skoro na spicku a davka klesla na svou uroven ve spicce, OVL_EXIT_N
-    // mereni po sobe), nebo davka pod OVL_RESET_DOSE. Vola se pred ulozenim
-    // noveho mereni do historie.
+    // Turns OVL on when a threshold is exceeded or on a steep cps drop that
+    // the dose does not follow. Turned off by recovery through the peak (cps climbed back
+    // close to the peak and the dose fell to its level at the peak, OVL_EXIT_N
+    // measurements in a row), or by dose below OVL_RESET_DOSE. Called before storing
+    // a new measurement in the history.
     function updateOvl(now as Number, dose as Float, cps as Float) as Void {
-        // cps: strop nebo prudky pokles; davka se dal ukazuje (Raysid ji
-        // pocita i pri zahlcenych cps)
-        // Raysid sam hlasi pretizeni (stejne jako jeho cervena LED); vlastni
-        // odhad z prubehu cps a davky jen kdyz priznak neposila
+        // cps: ceiling or steep drop; the dose is still shown (the Raysid
+        // computes it even with saturated cps)
+        // The Raysid reports overload itself (same as its red LED); our own
+        // estimate from the cps and dose trend only when it does not send the flag
         if (devOvl != null) {
             cpsOvlOn = devOvl as Boolean;
             if (dose > OVL_DOSE) {
@@ -315,24 +315,24 @@ class RaysidState {
             _ovlPrevCps = cps;
             _ovlPrevDose = dose;
         } else if (cpsOvlOn && !hit) {
-            // Pri zahlceni cps klesaji a davka roste; pri odchodu ze zahlceni
-            // naopak cps stoupaji a davka klesa. Navrat = cps zpet u spicky pri
-            // davce nejvys jako ve spicce; potvrzeni dalsim merenim, kdy davka
-            // zustala dole (cps uz pak smi klesat spolu s ni)
-            // Davka v Raysidu se zpozduje (pri nabehu zustane ve spicce nizko,
-            // pri odchodu chvili drzi vys), proto jen volna mez OVL_EXIT_DOSE a
-            // potvrzeni dalsim merenim, ze davka uz neroste
+            // During saturation cps falls and dose rises; when leaving saturation
+            // cps rises and dose falls. Recovery = cps back near the peak with
+            // dose at most as at the peak; confirmed by the next measurement where the dose
+            // stayed low (cps may then fall together with it)
+            // The Raysid dose lags (on ramp-up it stays low at the peak,
+            // on exit it stays high for a while), hence only the loose limit OVL_EXIT_DOSE and
+            // confirmation by the next measurement that the dose is no longer rising
             var lowDose = dose <= _ovlPeakDose * OVL_EXIT_DOSE;
             var nearPeak = cps >= _ovlPeak * OVL_EXIT_CPS;
             var notRising = _ovlOk == 0 || dose <= _ovlPrevDose * 1.05;
-            // Pri rychlem odchodu cps spicku hned preskoci a klesaji spolu s
-            // davkou: druhe mereni proto staci s klesajici davkou
+            // On a fast exit cps skips past the peak at once and falls together with
+            // the dose: so a second measurement with a falling dose is enough
             var back = _ovlPeak > 0.0 && lowDose && notRising
                 && (nearPeak || (_ovlOk > 0 && dose < _ovlPrevDose));
             _ovlOk = back ? _ovlOk + 1 : 0;
-            // Druhy zpusob: cps a davka se hybou stejnym smerem (obe klesaji
-            // nebo obe rostou) OVL_SAME_N mereni po sobe. Pri zahlceni jdou
-            // vzdy proti sobe, takze tohle nastane az mimo nej.
+            // Second way: cps and dose move in the same direction (both fall
+            // or both rise) OVL_SAME_N measurements in a row. During saturation they always
+            // go against each other, so this happens only outside it.
             var same = _ovlPrevCps > 0.0 && ((cps < _ovlPrevCps * (1.0 - OVL_SAME_STEP) && dose < _ovlPrevDose)
                 || (cps > _ovlPrevCps * (1.0 + OVL_SAME_STEP) && dose > _ovlPrevDose));
             _ovlSame = same ? _ovlSame + 1 : 0;
@@ -342,7 +342,7 @@ class RaysidState {
                 cpsOvlOn = false;
             }
         }
-        // davka: nad 999 uSv/h se nikdy neukaze cislo
+        // dose: above 999 uSv/h a number is never shown
         if (dose > OVL_DOSE) {
             doseOvlOn = true;
         } else if (doseOvlOn && dose < OVL_DOSE_RESET) {
@@ -351,7 +351,7 @@ class RaysidState {
         ovl = cpsOvlOn || doseOvlOn;
     }
 
-    // Spicka cps v poslednich OVL_DROP_MS a davka v ni proti aktualnimu mereni
+    // Peak cps in the last OVL_DROP_MS and the dose at it vs the current measurement
     private function cpsDropped(now as Number, dose as Float, cps as Float) as Boolean {
         var peak = 0.0;
         var peakDose = 0.0;
@@ -367,8 +367,8 @@ class RaysidState {
         }
         _pk = peak;
         _pkD = peakDose;
-        // Pod OVL_RESET_DOSE zahlceni nehrozi (falesne OVL po odchodu od zdroje,
-        // kdy cps klesaji rychleji nez opozdena davka)
+        // Below OVL_RESET_DOSE saturation cannot happen (false OVL after moving away from a source,
+        // when cps falls faster than the lagging dose)
         if (peak < OVL_DROP_MIN_CPS || peakDose <= 0.0 || dose < OVL_RESET_DOSE) {
             return false;
         }
@@ -377,8 +377,8 @@ class RaysidState {
         return (rc <= OVL_FAST_CPS && rd >= OVL_FAST_DOSE) || (rc <= OVL_DROP_CPS && rd >= rc * OVL_DROP_GAP && rd >= 1.0);
     }
 
-    // Prumer davky a cps za mereni novejsi nez tFrom (ms systemoveho casovace),
-    // vzdy aspon z posledniho mereni; pro body mapovani nezavisle na nastaveni
+    // Average dose and cps over measurements newer than tFrom (system timer ms),
+    // always at least from the last measurement; for mapping points, independent of settings
     function avgSince(tFrom as Number) as Array<Float>? {
         var sd = 0.0;
         var sc = 0.0;
@@ -395,7 +395,7 @@ class RaysidState {
         return n == 0 ? null : [sd / n, sc / n] as Array<Float>;
     }
 
-    // Zobrazovane hodnoty: okamzite, nebo prumer podle nastaveni
+    // Displayed values: instant, or averaged per settings
     function shownDose() as Float? {
         if (avgMode == 0 || histCount == 0 || doseRate == null) {
             return doseRate;
@@ -410,7 +410,7 @@ class RaysidState {
         return smoothAt((histHead - 1 + HIST) % HIST, 60000)[1];
     }
 
-    // Ulozena hodnota stejneho typu jako vychozi; jinak (chybi, poskozena) vychozi
+    // Stored value of the same type as the default; otherwise (missing, damaged) the default
     private function load(key as String, def as Boolean or Number) as Boolean or Number {
         var v = Storage.getValue(key);
         if (def instanceof Boolean) {
@@ -478,7 +478,7 @@ class RaysidApp extends Application.AppBase {
         ble.stop();
     }
 
-    // Klic nebo prepinac odesilani zmeneny v Garmin Connect
+    // Key or upload toggle changed in Garmin Connect
     function onSettingsChanged() as Void {
         uploader.settingsChanged();
     }

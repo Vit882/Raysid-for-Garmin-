@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Graphics;
 import Toybox.Lang;
@@ -14,12 +14,12 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-// Oranzova a modra: dobre rozlisitelne i pro barvoslepe a na MIP displeji
-const CHART_DOSE = 0xFFAA00;   // oranzova
-const CHART_CPS = 0x00AAFF;    // modra
-const UP_COLOR = 0xFFFF00;     // syta zluta: oblouk u UP (akce obrazovky)
-const UP_TEXT = 0xFFFF00;      // stejna zluta pro text napovedy k UP
-const CHART_CPS_DIM = 0x0055AA;   // tlumena modra pro rozptyl cps v grafu
+// Orange and blue: easy to tell apart for color-blind users and on a MIP display
+const CHART_DOSE = 0xFFAA00;   // orange
+const CHART_CPS = 0x00AAFF;    // blue
+const UP_COLOR = 0xFFFF00;     // saturated yellow: arc at UP (screen action)
+const UP_TEXT = 0xFFFF00;      // same yellow for the UP hint text
+const CHART_CPS_DIM = 0x0055AA;   // dimmed blue for the cps spread in the chart
 
 class RaysidView extends WatchUi.View {
     const UP_SHIFT = 6;
@@ -34,7 +34,7 @@ class RaysidView extends WatchUi.View {
         var w = dc.getWidth();
         var h = dc.getHeight();
         var cx = w / 2;
-        // Probliknuti pri alarmu (jen na hlavni obrazovce)
+        // Flash on alarm (main screen only)
         var now = System.getTimer();
         var bg = Graphics.COLOR_BLACK;
         if (_state.page == 0 && !_state.showDebug && now < _state.flashUntil && (now / 250) % 2 == 0) {
@@ -43,14 +43,14 @@ class RaysidView extends WatchUi.View {
         dc.setColor(bg, bg);
         dc.clear();
 
-        // Stavovy radek, pri alarmu misto nej upozorneni
+        // Status line, replaced by a warning during an alarm
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         var top = Tr.t(_state.status);
         if (_state.statusArg.length() > 0) {
             top += ": " + _state.statusArg;
         }
         var topY = (h * 0.12).toNumber() - (_state.page == 1 ? UP_SHIFT : 0);
-        // Jmeno Raysidu jen kdyz se radek vejde do kulateho displeje
+        // Raysid name only if the line fits the round display
         if (_state.deviceName != null) {
             var withName = _state.deviceName + " " + top;
             if (dc.getTextWidthInPixels(withName, Graphics.FONT_XTINY) <= chordAt(h, topY, Graphics.FONT_XTINY)) {
@@ -64,7 +64,7 @@ class RaysidView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
             top = Tr.t(:rapidRise);
         }
-        // Obrazovka grafu je cela o UP_SHIFT px vys, aby se graf vesel vetsi
+        // The whole chart screen is UP_SHIFT px higher so the chart can be bigger
         dc.drawText(cx, topY, Graphics.FONT_XTINY, fitText(dc, top, Graphics.FONT_XTINY, chordAt(h, topY, Graphics.FONT_XTINY)), Graphics.TEXT_JUSTIFY_CENTER);
 
         if (_state.showDebug) {
@@ -73,7 +73,7 @@ class RaysidView extends WatchUi.View {
         }
         drawMenuHint(dc, w, h);
         if (_state.page == 2 && !recorder().enabled) {
-            _state.page = 0;   // mapovani mezitim vypnute
+            _state.page = 0;   // mapping was turned off meanwhile
         }
         if (_state.page == 1) {
             drawChart(dc, w, h);
@@ -86,11 +86,11 @@ class RaysidView extends WatchUi.View {
 
         var stale = _state.lastUpdate == null || System.getTimer() - (_state.lastUpdate as Number) > 5000;
 
-        // Rozlozeni pocitane z vysky pisma, aby se radky neprekryvaly.
-        // Kazda velicina je cislo a hned za nim jednotka ve stejne barve.
-        // Nahore velkym pismem davka, pod ni mensim cps; UP je prohodi.
-        // Zobrazene hodnoty jsou okamzite nebo prumer podle nastaveni, alarmy
-        // (cervena barva) ale vzdy podle okamzite hodnoty jako signalizace
+        // Layout computed from font heights so lines do not overlap.
+        // Each quantity is a number followed directly by its unit in the same color.
+        // Dose rate in a large font at the top, cps smaller below; UP swaps them.
+        // Displayed values are instantaneous or averaged per settings, but alarms
+        // (red color) always follow the instantaneous value, like the signalling
         var shownDose = _state.shownDose();
         var doseText = doseOvl(_state) ? "OVL" : doseNum(shownDose);
         var doseU = doseOvl(_state) ? "uSv/h" : doseUnit(shownDose);
@@ -101,9 +101,9 @@ class RaysidView extends WatchUi.View {
         var cpsU = cpsOvl(_state) ? "kcps" : cpsUnit(shownCps);
         var cpsOver = _state.cpsLimit() > 0 && _state.cps != null && (_state.cps as Float) >= _state.cpsLimit();
         var cpsColor = stale ? Graphics.COLOR_DK_GRAY : (cpsOver || cpsOvl(_state) ? Graphics.COLOR_RED : CHART_CPS);
-        // Radky maji pevnou polohu i velikost pisma bez ohledu na to, ktera
-        // velicina je nahore. Spodni radek je co nejvetsi, pokud se pod nej
-        // jeste vejdou upozorneni a baterie nad radek REC.
+        // Lines have a fixed position and font size regardless of which
+        // quantity is on top. The bottom line is as large as possible while
+        // the warnings and battery still fit below it, above the REC line.
         var row1 = (h * 0.22).toNumber();
         var bigF = Graphics.FONT_NUMBER_HOT;
         var base1 = row1 + Graphics.getFontAscent(bigF);
@@ -117,13 +117,13 @@ class RaysidView extends WatchUi.View {
         }
         var base2 = y2 + Graphics.getFontAscent(smallF);
         var y = base2 + Graphics.getFontDescent(smallF) / 2 + 6;
-        // Pismo kazdeho radku se voli tak, aby se do nej vesla davka i cps,
-        // takze se po prohozeni velikost nezmeni
+        // Each line's font is chosen so both dose rate and cps fit in it,
+        // so the size does not change after swapping
         var f1 = fitFont(dc, w, bigF, Graphics.FONT_SMALL, doseText, doseU, cpsText, cpsU);
         var f2 = fitFont(dc, w, smallF, smallU, doseText, doseU, cpsText, cpsU);
-        // Ciselna pisma neumi pismena: OVL se kresli textovym pismem na stejne
-        // zakladni care a blika (pul sekundy sviti, pul nesviti)
-        // OVL jen u veliciny, ktera do nej spadla
+        // Number fonts have no letters: OVL is drawn in a text font on the same
+        // baseline and blinks (half a second on, half off)
+        // OVL only for the quantity that went into it
         var blinkOn = (System.getTimer() / 500) % 2 == 0;
         var cpsTop = _state.swapMain;
         drawMain(dc, cx, cpsTop ? base2 : base1, doseText, doseU, cpsTop ? f2 : f1, cpsTop ? smallU : Graphics.FONT_SMALL,
@@ -145,11 +145,11 @@ class RaysidView extends WatchUi.View {
         drawClock(dc, cx, h);
     }
 
-    // Sirka kulateho displeje v miste radku textu (s okrajem)
+    // Width of the round display at a text line (with margin)
     private function chordAt(h as Number, y as Number, font as Graphics.FontType) as Number {
         var r = h / 2;
         var fh = Graphics.getFontHeight(font);
-        // Uzsi z horniho a dolniho okraje radku
+        // The narrower of the top and bottom edge of the line
         var dy = (r - y).abs() > (r - y - fh).abs() ? (r - y).abs() : (r - y - fh).abs();
         if (dy >= r) {
             return 0;
@@ -157,7 +157,7 @@ class RaysidView extends WatchUi.View {
         return 2 * Math.sqrt(r * r - dy * dy).toNumber() - 12;
     }
 
-    // Text zkraceny tak, aby se vesel do sirky (konec nahradi ..)
+    // Text shortened to fit the width (end replaced with ..)
     private function fitText(dc as Graphics.Dc, text as String, font as Graphics.FontType, maxW as Number) as String {
         if (dc.getTextWidthInPixels(text, font) <= maxW) {
             return text;
@@ -169,25 +169,25 @@ class RaysidView extends WatchUi.View {
         return (text.substring(0, n) as String) + "..";
     }
 
-    // Male hodiny bile uplne nahore, nad stavovym radkem
+    // Small clock in white at the very top, above the status line
     private function drawClock(dc as Graphics.Dc, cx as Number, h as Number) as Void {
         var t = System.getClockTime();
         var fh = Graphics.getFontHeight(Graphics.FONT_XTINY);
         var y = (h * 0.12).toNumber() - fh + 2;
         y = y < 2 ? 2 : y;
         var hr = t.hour;
-        // 12hodinovy cas podle nastaveni hodinek
+        // 12-hour time per the watch settings
         if (!System.getDeviceSettings().is24Hour) {
             hr = hr % 12 == 0 ? 12 : hr % 12;
         }
         var clock = hr + ":" + t.min.format("%02d");
-        // Pri prumerovani sede za hodinami, pres kolik se prumeruje; oboje
-        // vystredene jako celek, aby nic nelezlo pres kulaty okraj
+        // When averaging, the averaging span in gray after the clock; both
+        // centered as a whole so nothing crosses the round edge
         var a = avgLabel(_state);
         var tw = dc.getTextWidthInPixels(clock, Graphics.FONT_XTINY);
         var aw = a != null ? dc.getTextWidthInPixels(" " + a, Graphics.FONT_XTINY) : 0;
-        // Sirka kulateho displeje v polovine vysky textu; kdyz se nevejde,
-        // zkratit na "~10 s" / "~5x"
+        // Width of the round display at half the text height; if it does not fit,
+        // shorten to "~10 s" / "~5x"
         var r = h / 2;
         var dy = r - (y + fh / 2);
         var chord = 2 * Math.sqrt(r * r - dy * dy).toNumber() - 16;
@@ -204,7 +204,7 @@ class RaysidView extends WatchUi.View {
         }
     }
 
-    // Baterie Raysidu i hodinek: popisky sede, procenta barevne podle stavu
+    // Raysid and watch battery: labels gray, percentages colored by state
     private function drawBatteries(dc as Graphics.Dc, cx as Number, y as Number) as Void {
         var rb = _state.battery;
         var wb = System.getSystemStats().battery;
@@ -214,7 +214,7 @@ class RaysidView extends WatchUi.View {
             "   " + Tr.t(:watch) + " ", Graphics.COLOR_LT_GRAY,
             wb.format("%.0f") + "%", batColor(wb)
         ];
-        // Vetsim pismem, pokud se radek vejde do kulateho displeje
+        // Larger font if the line fits the round display
         var font = Graphics.FONT_TINY;
         var total = 0;
         for (var i = 0; i < parts.size(); i += 2) {
@@ -237,16 +237,16 @@ class RaysidView extends WatchUi.View {
         }
     }
 
-    // Nad 30 % zelena, nad 20 % oranzova, jinak cervena
+    // Above 30 % green, above 20 % orange, otherwise red
     private function batColor(p as Float) as Number {
         return p > 30.0 ? Graphics.COLOR_GREEN : (p > 20.0 ? Graphics.COLOR_ORANGE : Graphics.COLOR_RED);
     }
 
-    // Cislo a za nim mensi jednotka na spolecne zakladni lince, cele vystredene
-    // Radek s cislem a jednotkou na dane zakladni lince. Kdyby se cislo
-    // neveslo na sirku, pouzije se mensi pismo, poloha radku zustane stejna.
-    // Jeden radek hlavni obrazovky; pri OVL textovym pismem (ciselna neumi
-    // pismena) na stejne zakladni care, blikajici
+    // Number followed by a smaller unit on a shared baseline, all centered
+    // Line with a number and unit on the given baseline. If the number does
+    // not fit the width, a smaller font is used; the line position stays the same.
+    // One line of the main screen; on OVL in a text font (number fonts have no
+    // letters) on the same baseline, blinking
     private function drawMain(dc as Graphics.Dc, cx as Number, base as Number, num as String, unit as String,
             font as Graphics.FontType, unitFont as Graphics.FontType, ovlFont as Graphics.FontType,
             color as Number, ovl as Boolean, blinkOn as Boolean) as Void {
@@ -259,7 +259,7 @@ class RaysidView extends WatchUi.View {
         drawValue(dc, cx, base - Graphics.getFontAscent(font), num, font, unit, unitFont, color);
     }
 
-    // Nejvetsi pismo od font dolu, do ktereho se vejde davka i cps s jednotkou
+    // Largest font from font downwards that fits both dose rate and cps with unit
     private function fitFont(dc as Graphics.Dc, w as Number, font as Graphics.FontType, unitFont as Graphics.FontType,
             dose as String, doseU as String, cps as String, cpsU as String) as Graphics.FontType {
         var fonts = [Graphics.FONT_NUMBER_HOT, Graphics.FONT_NUMBER_MEDIUM, Graphics.FONT_NUMBER_MILD] as Array<Graphics.FontType>;
@@ -286,7 +286,7 @@ class RaysidView extends WatchUi.View {
         dc.drawText(x + wn + gap, base - Graphics.getFontAscent(unitFont), unitFont, unit, Graphics.TEXT_JUSTIFY_LEFT);
     }
 
-    // Stav zaznamu dole: cervena tecka, REC a pocet bodu (nebo cekani na GPS)
+    // Recording status at the bottom: red dot, REC and point count (or waiting for GPS)
     private function drawRecord(dc as Graphics.Dc, cx as Number, h as Number) as Void {
         var r = recorder();
         if (!r.enabled || (!r.on && !r.full && !r.paused)) {
@@ -302,36 +302,36 @@ class RaysidView extends WatchUi.View {
         dc.drawText(cx + 4, y, Graphics.FONT_XTINY, text, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    // Obrazovka mapovani: stav zaznamu a GPS, vzdalenost, body, cas,
-    // maxima od zapnuti nahravani a stav odesilani na web
+    // Mapping screen: recording and GPS status, distance, points, time,
+    // maxima since recording started and website upload status
     private function drawMapping(dc as Graphics.Dc, w as Number, h as Number) as Void {
         var cx = w / 2;
         var r = recorder();
         var fh = Graphics.getFontHeight(Graphics.FONT_XTINY);
         var y = (h * 0.20).toNumber();
 
-        // Stav: REC / pozastaveno / plno, a kvalita GPS
-        // Pri pozastaveni napoveda, ze nahravani zapina UP (v barve jeho oblouku)
+        // Status: REC / paused / full, and GPS quality
+        // When paused, a hint that UP starts recording (in the color of its arc)
         var st = r.full ? Tr.t(:recFull) : (r.on ? (r.gpsOk ? (r.noData ? noDataText() : "REC") : Tr.t(r.gpsWeak ? :gpsWeak : :waitGps)) : Tr.t(r.paused ? :recPauseUp : :recPausedUp));
         dc.setColor(r.on && r.gpsOk && !r.noData ? Graphics.COLOR_RED : (!r.on && !r.full ? UP_TEXT : Graphics.COLOR_ORANGE), Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, y, Graphics.FONT_XTINY, st, Graphics.TEXT_JUSTIFY_CENTER);
         y += fh;
 
-        // Vzdalenost velkym pismem
+        // Distance in a large font
         var km = r.meters / 1000.0;
         var distText = r.meters < 999.5 ? r.meters.format("%.0f") + " m" : km.format(km < 9.995 ? "%.2f" : "%.1f") + " km";
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, y, Graphics.FONT_MEDIUM, distText, Graphics.TEXT_JUSTIFY_CENTER);
         y += Graphics.getFontHeight(Graphics.FONT_MEDIUM);
 
-        // Body a doba nahravani
+        // Points and recording time
         var mins = r.activeSec() / 60;
         var dur = (mins / 60) + ":" + (mins % 60).format("%02d");
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, y, Graphics.FONT_XTINY, r.session + " " + Tr.t(:points) + "  " + dur + " h", Graphics.TEXT_JUSTIFY_CENTER);
         y += fh + 4;
 
-        // Maxima v ulozenych bodech od zapnuti nahravani
+        // Maxima in stored points since recording started
         dc.setColor(CHART_DOSE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, y, Graphics.FONT_TINY, "max " + (r.session > 0 ? doseNum(r.maxDose) + " " + doseUnit(r.maxDose) : "-- uSv/h"), Graphics.TEXT_JUSTIFY_CENTER);
         y += Graphics.getFontHeight(Graphics.FONT_TINY);
@@ -339,7 +339,7 @@ class RaysidView extends WatchUi.View {
         dc.drawText(cx, y, Graphics.FONT_TINY, "max " + (r.session > 0 ? cpsNum(r.maxCps) + " " + cpsUnit(r.maxCps) : "-- cps"), Graphics.TEXT_JUSTIFY_CENTER);
         y += Graphics.getFontHeight(Graphics.FONT_TINY) + 4;
 
-        // Odesilani na web
+        // Upload to the website
         var u = uploader();
         var bad = u.status == :upAuth || u.status == :upErr || u.verify == :vfBad;
         var webText = u.verify == :vfBad ? Tr.t(:vfBad) : u.label();
@@ -347,21 +347,21 @@ class RaysidView extends WatchUi.View {
         dc.drawText(cx, y, Graphics.FONT_XTINY, fitText(dc, Tr.t(:web) + ": " + webText, Graphics.FONT_XTINY, chordAt(h, y, Graphics.FONT_XTINY)), Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    // Nahravani bezi, ale body se neukladaji: pretizeni nebo chybi data
+    // Recording is running but points are not stored: overload or missing data
     private function noDataText() as String {
         return _state.ovl ? "OVL" : Tr.t(:waitRaysid);
     }
 
-    // Znacky u tlacitek: zvyraznene oblouky na okraji. START vpravo nahore
-    // (~30 stupnu), UP vlevo (~180) a DOWN vlevo dole (~210), uhly od 3 hodin
-    // proti smeru hodinovych rucicek.
+    // Button markers: highlighted arcs at the edge. START top right
+    // (~30 degrees), UP left (~180) and DOWN bottom left (~210), angles from 3 o'clock
+    // counterclockwise.
     private function drawMenuHint(dc as Graphics.Dc, w as Number, h as Number) as Void {
         var r = (w < h ? w : h) / 2;
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.setPenWidth(3);
         dc.drawArc(w / 2, h / 2, r - 2, Graphics.ARC_COUNTER_CLOCKWISE, 24, 36);
-        // UP ma na kazde obrazovce vlastni akci, proto jinou barvou nez DOWN
-        // a o par px tlustsi (polomer mensi, aby zustal u okraje)
+        // UP has its own action on every screen, hence a different color from DOWN
+        // and a few px thicker (smaller radius so it stays at the edge)
         dc.setColor(UP_COLOR, Graphics.COLOR_TRANSPARENT);
         dc.setPenWidth(7);
         dc.drawArc(w / 2, h / 2, r - 4, Graphics.ARC_COUNTER_CLOCKWISE, 174, 186);
@@ -376,7 +376,7 @@ class RaysidView extends WatchUi.View {
         dc.drawText(cx, h * 0.25, Graphics.FONT_XTINY, Tr.t(:packets) + ": " + _state.packets, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, h * 0.31, Graphics.FONT_XTINY, _state.typeInfo, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, h * 0.84, Graphics.FONT_XTINY, Tr.t(:refresh) + " " + intervalText(), Graphics.TEXT_JUSTIFY_CENTER);
-        // Hex po radcich, aby se vesel na kulaty displej
+        // Hex in lines so it fits the round display
         var raw = _state.lastRaw;
         var y = h * 0.39;
         var line = 0;
@@ -393,32 +393,32 @@ class RaysidView extends WatchUi.View {
         if (_state.intervalMs == null) {
             return "--";
         }
-        // Posledni interval a klouzavy prumer, oboje v ms
+        // Last interval and moving average, both in ms
         return _state.lastIntervalMs + " ms (" + Tr.t(:avgShort) + " " + (_state.intervalMs as Float).toNumber() + " ms)";
     }
 
-    // Graf davkoveho prikonu (zelene, stupnice vlevo) a cps (modre, stupnice vpravo)
-    // za poslednich chartSec sekund. Kazda rada ma vlastni automatickou stupnici.
+    // Chart of dose rate (orange, scale on the left) and cps (blue, scale on the right)
+    // over the last chartSec seconds. Each series has its own automatic scale.
     private function drawChart(dc as Graphics.Dc, w as Number, h as Number) as Void {
         var cx = w / 2;
         var stale = _state.lastUpdate == null || System.getTimer() - (_state.lastUpdate as Number) > 5000;
 
-        // Aktualni hodnoty nahore
+        // Current values at the top
         var blinkOff = (System.getTimer() / 500) % 2 != 0;
         dc.setColor(doseOvl(_state) ? (blinkOff ? Graphics.COLOR_BLACK : Graphics.COLOR_RED) : (stale ? Graphics.COLOR_DK_GRAY : CHART_DOSE), Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h * 0.17 - UP_SHIFT, Graphics.FONT_SMALL, (doseOvl(_state) ? "OVL uSv/h" : doseNum(_state.shownDose()) + " " + doseUnit(_state.shownDose())), Graphics.TEXT_JUSTIFY_CENTER);
         var shownCps = _state.shownCps();
         var cpsText = cpsOvl(_state) ? "OVL kcps" : cpsNum(shownCps) + " " + cpsUnit(shownCps);
         dc.setColor(cpsOvl(_state) ? (blinkOff ? Graphics.COLOR_BLACK : Graphics.COLOR_RED) : (stale ? Graphics.COLOR_DK_GRAY : CHART_CPS), Graphics.COLOR_TRANSPARENT);
-        // O par px vys, aby ho nezakryl pruh alarmu nad grafem
+        // A few px higher so the alarm bar above the chart does not cover it
         dc.drawText(cx, h * 0.17 - UP_SHIFT + Graphics.getFontHeight(Graphics.FONT_SMALL) - 7, Graphics.FONT_SMALL, cpsText, Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Spodek grafu jde nahoru min nez zbytek (graf se natahne) a diky
-        // tomu se do kulateho displeje vejde i o neco sirsi
+        // The bottom of the chart moves up less than the rest (the chart stretches), so
+        // a slightly wider chart fits the round display
         var y0 = (h * 0.40).toNumber() - UP_SHIFT;
         var y1 = (h * 0.79).toNumber() - 17;
-        // Sirka podle kulateho displeje: vsechny rohy grafu musi zustat aspon
-        // 12 px od okraje, aby nekolidovaly s okrajem ani se znackami tlacitek
+        // Width per the round display: all chart corners must stay at least
+        // 12 px from the edge so they do not collide with the edge or the button markers
         var rr = (w < h ? w : h) / 2 - 12;
         var dy0 = (y0 - h / 2).abs();
         var dy1 = (y1 - h / 2).abs();
@@ -435,16 +435,16 @@ class RaysidView extends WatchUi.View {
         dc.drawLine(x0, y0, x1, y0);
         dc.drawLine(x0, (y0 + y1) / 2, x1, (y0 + y1) / 2);
         dc.drawLine(x0, y1, x1, y1);
-        // Popisky casu posunute dovnitr, aby je neorizl kulaty okraj
+        // Time labels shifted inwards so the round edge does not clip them
         var now = System.getTimer();
-        // Dokud nejsou data za celou zvolenou dobu (po spusteni, po vypadku),
-        // roztahne se graf na to, co je, aby vyplnil celou sirku
+        // Until there is data for the whole selected period (after start, after a dropout),
+        // the chart stretches over what there is to fill the full width
         var spanMs = _state.chartSec * 1000;
         var wantMs = spanMs;
         var haveMs = 0;
         if (_state.histCount > 0) {
-            // Zacatek souvisleho useku dat (po vypadku se graf roztahne znovu);
-            // prochazi se jen viditelne okno
+            // Start of a continuous run of data (after a dropout the chart stretches again);
+            // only the visible window is scanned
             var newest = (_state.histHead - 1 + _state.HIST) % _state.HIST;
             var first = _state.histT[newest] as Number;
             for (var k = 1; k < _state.histCount; k++) {
@@ -462,17 +462,17 @@ class RaysidView extends WatchUi.View {
             }
         }
         var tMin = now - spanMs;
-        // Prumer se pocita az pri kresleni ze surovych mereni, takze zmena
-        // nastaveni hned plati pro cely graf i pro cisla nahore
-        // V grafu je okno prumeru nejvys petina jeho delky, jinak by se
-        // cara jen rozmazala (10 s graf = prumer nejvys 2 s, 60 s = 12 s)
+        // The average is computed only when drawing, from raw measurements, so a change
+        // of settings applies immediately to the whole chart and the numbers at the top
+        // In the chart the averaging window is at most a fifth of its length, otherwise
+        // the line would just blur (10 s chart = average at most 2 s, 60 s = 12 s)
         var capMs = _state.chartSec * 200;
         _state.smooth(tMin, capMs);
         dc.drawText(w * 0.17, y1 + 1, Graphics.FONT_XTINY, "-" + ((spanMs + 500) / 1000) + " s", Graphics.TEXT_JUSTIFY_LEFT);
         dc.drawText(w * 0.83, y1 + 1, Graphics.FONT_XTINY, Tr.t(:now), Graphics.TEXT_JUSTIFY_RIGHT);
         var bms = bucketMs(spanMs);
         var buckets = spanMs > 30000 ? buildBuckets(tMin, bms) : null;
-        // Rozsah hodnot ve viditelnem okne
+        // Value range in the visible window
         var dMin = null, dMax = null, cMin = null, cMax = null;
         var n = 0;
         for (var k = 0; buckets == null && k < _state.histCount; k++) {
@@ -488,7 +488,7 @@ class RaysidView extends WatchUi.View {
             cMax = cMax == null || c > cMax ? c : cMax;
             n++;
         }
-        // Pri prumerovani stupnice podle prumeru, aby jeden vykyv nesplacl zbytek grafu
+        // When averaging, scale by the average so one spike does not flatten the rest of the chart
         if (buckets != null) {
             var bd = buckets[1] as Array<Float>;
             var bc = buckets[4] as Array<Float>;
@@ -503,8 +503,8 @@ class RaysidView extends WatchUi.View {
         if (n < 2) {
             drawRange(dc, cx, h, haveMs, wantMs, capMs);
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-            // V horni polovine grafu, at se nekryje se stredovou carou; bez
-            // dat (odpojeno) stav pripojeni misto "sbiram data"
+            // In the upper half of the chart so it does not overlap the center line; without
+            // data (disconnected) the connection status instead of "collecting data"
             var noData = _state.lastUpdate == null || now - (_state.lastUpdate as Number) > 5000;
             dc.drawText(cx, y0 + (y1 - y0) / 4, Graphics.FONT_XTINY, Tr.t(noData ? _state.status : :collecting), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
             return;
@@ -523,8 +523,8 @@ class RaysidView extends WatchUi.View {
         }
         dc.setPenWidth(1);
 
-        // Stupnice: davka vlevo, cps vpravo. Kresli se az nakonec s cernym
-        // pozadim, aby je cary grafu nikdy neprekryly.
+        // Scales: dose rate on the left, cps on the right. Drawn last with a black
+        // background so the chart lines never cover them.
         var fh = Graphics.getFontHeight(Graphics.FONT_XTINY);
         dc.setColor(CHART_DOSE, Graphics.COLOR_BLACK);
         dc.drawText(x0 + 2, y0 + 1, Graphics.FONT_XTINY, formatDose(dr[1]), Graphics.TEXT_JUSTIFY_LEFT);
@@ -536,14 +536,14 @@ class RaysidView extends WatchUi.View {
         drawRange(dc, cx, h, haveMs, wantMs, capMs);
     }
 
-    // Zvoleny rozsah vyrazne bile (meni se tlacitkem UP). Dokud nejsou data
-    // za celou dobu, za nim oranzove, za kolik sekund uz jsou.
+    // Selected range in bright white (changed with UP). Until there is data
+    // for the whole period, followed in orange by how many seconds there are.
     private function drawRange(dc as Graphics.Dc, cx as Number, h as Number, haveMs as Number, wantMs as Number, capMs as Number) as Void {
         var fy = (h * 0.865).toNumber() - UP_SHIFT - 13;
         var rangeText = _state.chartSec + " s";
         var waitText = haveMs < wantMs - 1000 ? "  (" + Tr.t(:chartWait) + " " + (haveMs / 1000) + " s)" : "";
         var waitColor = Graphics.COLOR_ORANGE;
-        // Po naplneni grafu sede, jak se v grafu skutecne prumeruje
+        // Once the chart is full, in gray, how the chart actually averages
         if (waitText.length() == 0 && _state.avgMode != 0) {
             waitText = "  " + chartAvgText(capMs);
             waitColor = Graphics.COLOR_LT_GRAY;
@@ -560,7 +560,7 @@ class RaysidView extends WatchUi.View {
         }
     }
 
-    // Popisek skutecneho prumeru v grafu; kdyz ho omezila delka grafu, s "max"
+    // Label of the actual chart average; if limited by the chart length, with "max"
     private function chartAvgText(capMs as Number) as String {
         if (_state.avgMode == 1) {
             var sec = _state.avgSec * 1000 > capMs ? capMs / 1000 : _state.avgSec;
@@ -573,15 +573,15 @@ class RaysidView extends WatchUi.View {
         return Tr.t(:avgShort) + " " + _state.avgN + "x";
     }
 
-    // Delka useku pro prumerovani: zhruba 24 useku na graf, nejmene 4 s (2 mereni)
+    // Segment length for averaging: about 24 segments per chart, at least 4 s (2 measurements)
     private function bucketMs(spanMs as Number) as Number {
         var ms = spanMs / 24;
         return ms < 4000 ? 4000 : ms;
     }
 
-    // Mereni v okne rozdelena do useku pevne zarovnanych na cas (graf pri
-    // posouvani neposkakuje). Vraci pole: [davka min, prumer, max,
-    // cps min, prumer, max, cas stredu useku], od nejstarsiho.
+    // Measurements in the window split into segments fixed to time (the chart does not
+    // jump while scrolling). Returns an array: [dose min, avg, max,
+    // cps min, avg, max, segment center time], oldest first.
     private function buildBuckets(tMin as Number, bms as Number) as Array<Array> {
         var out = [[], [], [], [], [], [], []] as Array<Array>;
         var count = 0;
@@ -618,8 +618,8 @@ class RaysidView extends WatchUi.View {
                 break;
             }
             cur = key;
-            // Min a max ze surovych mereni (spicky zustanou videt), stred
-            // z prumerovanych hodnot jako u cisel nahore
+            // Min and max from raw measurements (spikes stay visible), center
+            // from averaged values like the numbers at the top
             var d = _state.histDose[i] as Float;
             var c = _state.histCps[i] as Float;
             if (nn == 0) {
@@ -639,8 +639,8 @@ class RaysidView extends WatchUi.View {
         return out;
     }
 
-    // Prumer jako silna cara; u cps navic tenka tlumena carka min-max v useku,
-    // aby byly videt kratke spicky (davka jde s cps, druha carka by jen rusila)
+    // Average as a thick line; for cps also a thin dimmed min-max tick per segment,
+    // so short spikes are visible (dose rate follows cps, a second tick would only distract)
     private function drawBuckets(dc as Graphics.Dc, b as Array<Array>, iMin as Number, iAvg as Number, iMax as Number,
             range as Array<Float>, x0 as Number, x1 as Number, y0 as Number, y1 as Number,
             tMin as Number, now as Number, color as Number, whisker as Boolean) as Void {
@@ -679,8 +679,8 @@ class RaysidView extends WatchUi.View {
         return y < y0 ? y0 : (y > y1 ? y1 : y);
     }
 
-    // Automaticka stupnice: rozsah min..max s rezervou, ale aspon 10 % hodnoty,
-    // aby stabilni signal nebyl jen sum roztazeny pres cely graf.
+    // Automatic scale: range min..max with margin, but at least 10 % of the value,
+    // so a stable signal is not just noise stretched over the whole chart.
     private function scale(mn as Float, mx as Float, absMin as Float) as Array<Float> {
         var mid = (mn + mx) / 2.0;
         var span = mx - mn;
@@ -705,7 +705,7 @@ class RaysidView extends WatchUi.View {
         var first = true;
         var tSpan = (now - tMin).toFloat();
         var vSpan = range[1] - range[0];
-        // Od nejstarsiho bodu v okne k nejnovejsimu
+        // From the oldest point in the window to the newest
         var count = 0;
         for (var k = 0; k < _state.histCount; k++) {
             var i = (_state.histHead - 1 - k + _state.HIST) % _state.HIST;
@@ -727,7 +727,7 @@ class RaysidView extends WatchUi.View {
         }
     }
 
-    // Useky s alarmem podbarvene tmave cervene; pevny alarm ma navic cervene pruhy
+    // Segments with an alarm shaded dark red; a fixed alarm also has red bars
     private function drawAlarmBands(dc as Graphics.Dc, x0 as Number, x1 as Number, y0 as Number, y1 as Number,
             tMin as Number, now as Number) as Void {
         var tSpan = (now - tMin).toFloat();
@@ -741,7 +741,7 @@ class RaysidView extends WatchUi.View {
             }
             var a = _state.histAlarm[i] as Number;
             if (a > 0) {
-                // Tmave podbarveni, aby cary zustaly citelne; pevny alarm ma navic cerveny pruh nahore a dole
+                // Dark shading so the lines stay readable; a fixed alarm also has a red bar at top and bottom
                 dc.setColor(0x550000, Graphics.COLOR_TRANSPARENT);
                 dc.fillRectangle(x, y0 + 1, prevX - x + 1, y1 - y0 - 1);
                 if (a == 2) {
@@ -757,9 +757,9 @@ class RaysidView extends WatchUi.View {
         }
     }
 
-    // Popisek stupnice: do 1000 cislo, nad tim v tisicich s "k"
+    // Scale label: number up to 1000, above that in thousands with "k"
     private function formatCps(v as Float) as String {
-        // Meze podle zaokrouhleni, at 99.97 neukaze "100.0" a 999.6 "1000"
+        // Limits by rounding so 99.97 does not show "100.0" and 999.6 "1000"
         if (v < 99.95) {
             return v.format("%.1f");
         }
@@ -770,7 +770,7 @@ class RaysidView extends WatchUi.View {
         return k.format(k < 9.995 ? "%.2f" : (k < 99.95 ? "%.1f" : "%.0f")) + "k";
     }
 
-    // Popisek stupnice: stejna cisla jako jinde, v mSv/h s "m" za cislem
+    // Scale label: same numbers as elsewhere, in mSv/h with "m" after the number
     private function formatDose(v as Float?) as String {
         return doseNum(v) + (v != null && v >= 999.5 ? "m" : "");
     }

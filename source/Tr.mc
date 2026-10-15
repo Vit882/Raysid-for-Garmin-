@@ -1,16 +1,16 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Lang;
 
-// Preklady cele aplikace: 0 = cestina, 1 = anglictina, 2 = polstina.
-// Tr.t(:klic) vrati text v aktualnim jazyce.
+// Translations for the whole app: 0 = Czech, 1 = English, 2 = Polish.
+// Tr.t(:key) returns the text in the current language.
 module Tr {
     const LANG_CODES = ["CZ", "EN", "PL"];
     var lang as Number = 0;
@@ -26,7 +26,7 @@ module Tr {
 
     function build() as Dictionary<Symbol, Array<String> > {
         return {
-            // --- stav pripojeni ---
+            // --- connection status ---
             :stStart => ["Start", "Start", "Start"],
             :stRegistering => ["Registrace", "Registering", "Rejestracja"],
             :stProfileErr => ["Chyba profilu", "Profile error", "Błąd profilu"],
@@ -39,7 +39,7 @@ module Tr {
             :stProfile => ["Profil", "Profile", "Profil"],
             :stCccd => ["CCCD", "CCCD", "CCCD"],
 
-            // --- obrazovky ---
+            // --- screens ---
             :alarmLimit => ["ALARM: překročena mez", "ALARM: limit exceeded", "ALARM: przekroczony próg"],
             :rapidRise => ["Prudký nárůst", "Rapid rise", "Gwałtowny wzrost"],
             :beeperOff => ["CVAKÁNÍ VYPNUTO", "CLICKING OFF", "KLIKANIE WYŁ."],
@@ -123,7 +123,7 @@ module Tr {
             :off => ["vypnuto", "off", "wył."],
             :langName => ["Čeština", "English", "Polski"],
 
-            // --- napoveda ---
+            // --- help ---
             :hControls => ["Ovládání", "Controls", "Sterowanie"],
             :hControlsT => [
                 "START (pravé horní tlačítko, na displeji je u něj zvýrazněný oblouk) otevře menu. DOWN přepíná mezi hodnotami, grafem a při zapnutém mapování i obrazovkou Mapování. UP (žlutý oblouk) má na každé obrazovce vlastní akci: na hlavní prohodí dávku a cps (co je velké nahoře), u grafu přepne délku 10/20/30/60 s a na obrazovce Mapování zapne, pozastaví nebo po pauze obnoví nahrávání. BACK ukončí aplikaci. Dotyk displeje a swipe se ignorují, aby se nic nezměnilo omylem. Nastavení se pamatuje i po vypnutí aplikace.",
@@ -152,7 +152,7 @@ module Tr {
                 "Watch alarms. All alarms switches every alarm on or off at once; each alarm (Dose rate, CPS, Rapid rise) has its own submenu with a switch and a limit you can pick or enter (digit by digit: UP/DOWN change the digit, START moves to the next one and saves on the last, BACK goes back a digit). An alarm sounds when its limit is crossed and again only after dropping below 90 % of it. Limits can only be set below Raysid overload: at most 5000 cps and 999 µSv/h. During overload (red blinking OVL instead of the value) an enabled dose rate or CPS alarm always sounds. In the Alarm output submenu, sound, vibration, screen flash and red flashlight can be switched separately and the alarm length set: short (1×), medium (3×) or long (8×, about 15 s); any button on the main or chart screen silences it, as does switching the alarm off in the menu. The value above the limit turns red and alarm periods are shaded in the chart.",
                 "Alarmy zegarka. Wszystkie alarmy włącza lub wyłącza wszystkie naraz; każdy alarm (Dawka, CPS, Gwałtowny wzrost) ma własne podmenu z przełącznikiem i progiem, który można wybrać lub wpisać (cyfra po cyfrze: UP/DOWN zmienia cyfrę, START przechodzi do następnej i na ostatniej zapisuje, BACK cofa o cyfrę). Alarm odzywa się po przekroczeniu progu, a ponownie dopiero po spadku poniżej 90 % progu. Próg można ustawić tylko poniżej przeciążenia Raysida: najwyżej 5000 cps i 999 µSv/h. Przy przeciążeniu (czerwone migające OVL zamiast wartości) włączony alarm dawki lub cps odzywa się zawsze. W podmenu Sygnalizacja alarmu można osobno włączać dźwięk, wibracje, mignięcie ekranu i czerwoną latarkę oraz ustawić długość alarmu: krótki (1×), średni (3×) lub długi (8×, ok. 15 s); wycisza go dowolny przycisk na ekranie głównym lub wykresie, a także wyłączenie alarmu w menu. Wartość ponad progiem jest czerwona, a okresy alarmu są zacienione na wykresie."
             ],
-            // --- zaznam ---
+            // --- recording ---
             :mRecord => ["Žhavá místa", "Žhavá místa", "Žhavá místa"],
             :recPauseUp => ["pozastaveno", "paused", "wstrzymano"],
             :recPausedUp => ["UP = nahrávat", "UP = record", "UP = nagrywaj"],

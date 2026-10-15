@@ -1,11 +1,11 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Application;
 import Toybox.Application.Storage;
@@ -13,18 +13,18 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// Zadani API klice Zhavych mist primo v hodinkach (u aplikace nahrane pres
-// USB nefunguje nastaveni v Garmin Connect). UP/DOWN vybira znak, START ho
-// prida, BACK smaze posledni znak (u prazdneho zrusi zadavani). Na konci
-// seznamu znaku je OK, ktere klic ulozi. Nic se nedrzi (podrzeni UP/DOWN
-// spousti systemove zkratky).
-// Klic Zhavych mist je 48 hexadecimalnich znaku, staci tedy 0-9 a a-f
+// Entering the Zhava mista API key directly on the watch (for an app loaded via
+// USB, settings in Garmin Connect do not work). UP/DOWN selects a character, START
+// adds it, BACK deletes the last character (on empty input cancels entry). At the
+// end of the character list is OK, which saves the key. Nothing is held (holding
+// UP/DOWN triggers system shortcuts).
+// The Zhava mista key is 48 hexadecimal characters, so 0-9 and a-f are enough
 const KEY_CHARS = "0123456789abcdef";
 const KEY_LEN = 48;
 
 class KeyEntryView extends WatchUi.View {
     var text as String = "";
-    var pos as Number = 0;      // index v KEY_CHARS, KEY_CHARS.length() = OK
+    var pos as Number = 0;      // index into KEY_CHARS, KEY_CHARS.length() = OK
 
     var orig as String = "";
 
@@ -32,7 +32,7 @@ class KeyEntryView extends WatchUi.View {
         View.initialize();
         text = current;
         orig = current;
-        // Klic uz je zadany: kurzor rovnou na OK (START = beze zmeny zpet)
+        // Key already entered: cursor straight on OK (START = back without change)
         if (current.length() > 0) {
             pos = KEY_CHARS.length();
         }
@@ -51,12 +51,12 @@ class KeyEntryView extends WatchUi.View {
         dc.setColor(0xFFAA00, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h * 0.10, Graphics.FONT_XTINY, Tr.t(:apiKey) + " " + text.length() + "/" + KEY_LEN, Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Zadany text po radcich, zobrazi se konec (posledni 3 radky)
+        // Entered text in lines, the end is shown (last 3 lines)
         var per = 16;
         var lines = [] as Array<String>;
         for (var i = 0; i < text.length(); i += per) {
             var e = i + per < text.length() ? i + per : text.length();
-            // Po ctvericich, aby se dal klic snadno porovnat s webem
+            // In groups of four so the key is easy to compare with the website
             var line = "";
             for (var j = i; j < e; j += 4) {
                 line += (j > i ? " " : "") + text.substring(j, j + 4 < e ? j + 4 : e);
@@ -70,7 +70,7 @@ class KeyEntryView extends WatchUi.View {
             dc.drawText(cx, h * 0.20 + (i - first) * fh, Graphics.FONT_XTINY, lines[i], Graphics.TEXT_JUSTIFY_CENTER);
         }
 
-        // Vybrany znak velky, sousedni mensi
+        // Selected character large, neighbors smaller
         var y = h * 0.62;
         var n = okIndex() + 1;
         dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
@@ -81,7 +81,7 @@ class KeyEntryView extends WatchUi.View {
 
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h * 0.80, Graphics.FONT_XTINY, Tr.t(:keyHelp), Graphics.TEXT_JUSTIFY_CENTER);
-        // Kde klic najit: dokud se nic nezadalo, v miste pro zadany text
+        // Where to find the key: until something is entered, in the place for the entered text
         if (text.length() == 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, h * 0.22, Graphics.FONT_XTINY, Tr.t(:keyWhere1), Graphics.TEXT_JUSTIFY_CENTER);
@@ -129,12 +129,12 @@ class KeyEntryDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (_view.text.length() >= KEY_LEN) {
-            _view.pos = _view.okIndex();   // klic je cely, dalsi znak uz ne
+            _view.pos = _view.okIndex();   // the key is complete, no more characters
             WatchUi.requestUpdate();
             return true;
         }
         _view.text += _view.label(_view.pos);
-        // Po poslednim znaku rovnou nabidnout OK
+        // After the last character offer OK right away
         if (_view.text.length() >= KEY_LEN) {
             _view.pos = _view.okIndex();
         }
@@ -160,7 +160,7 @@ class KeyEntryDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    // Dotyk ignorovat, aby se nic nezmenilo omylem
+    // Ignore touch so nothing changes by accident
     function onTap(clickEvent as WatchUi.ClickEvent) as Boolean {
         return true;
     }
@@ -170,7 +170,7 @@ class KeyEntryDelegate extends WatchUi.BehaviorDelegate {
     }
 
     private function save() as Void {
-        // Beze zmeny: jen zavrit (klic uz je v nastaveni)
+        // No change: just close (the key is already in settings)
         var p = null;
         try {
             p = Application.Properties.getValue("zmKey");
@@ -184,10 +184,10 @@ class KeyEntryDelegate extends WatchUi.BehaviorDelegate {
             Application.Properties.setValue("zmKey", _view.text);
         } catch (e) {
         }
-        // Zaloha v Storage, kdyby se nastaveni pri aktualizaci aplikace ztratilo
+        // Backup in Storage, in case settings are lost on an app update
         put("zmKeyBak", _view.text);
         uploader().settingsChanged();
-        // Hned overit, ze web klic prijme
+        // Verify right away that the website accepts the key
         uploader().startVerify(_verifyItem);
         if (_item != null) {
             (_item as WatchUi.MenuItem).setSubLabel(keyLabel());
@@ -199,7 +199,7 @@ class KeyEntryDelegate extends WatchUi.BehaviorDelegate {
     }
 }
 
-// Popisek polozky API klic: nenastaven, nebo konec klice
+// Label of the API key item: not set, or the end of the key
 function keyLabel() as String {
     var k = currentKey();
     if (k.length() == 0) {
@@ -208,7 +208,7 @@ function keyLabel() as String {
     return "..." + k.substring(k.length() > 4 ? k.length() - 4 : 0, k.length());
 }
 
-// Klic z nastaveni; kdyby bylo prazdne (napr. po aktualizaci), ze zalohy
+// Key from settings; if empty (e.g. after an update), from the backup
 function currentKey() as String {
     var k = null;
     try {

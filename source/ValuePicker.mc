@@ -1,20 +1,20 @@
-// Raysid Garmin – Connect IQ aplikace pro dozimetr Raysid
-// Copyright (C) 2026 Vít Cenek a přispěvatelé (viz AUTHORS.md)
+// Raysid Garmin - Connect IQ app for the Raysid dosimeter
+// Copyright (C) 2026 Vít Cenek and contributors (see AUTHORS.md)
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tento program je svobodný software: můžete ho šířit a upravovat podle
-// GNU General Public License verze 3 nebo (podle vaší volby) jakékoli
-// pozdější, jak ji vydala Free Software Foundation. Šíří se BEZ JAKÉKOLI
-// ZÁRUKY. Plné znění licence je v souboru LICENSE.
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3 or (at your
+// option) any later version, as published by the Free Software Foundation.
+// It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// Zadani vlastni hodnoty po cislicich systemovym Pickerem hodinek:
-// UP/DOWN meni cislici, START jde na dalsi cislici (na posledni ulozi),
-// BACK se vrati o cislici zpet nebo zrusi. Nic se nedrzi, protoze
-// podrzeni UP/DOWN na fenixu spousti systemove zkratky.
+// Entering a custom value digit by digit with the watch system Picker:
+// UP/DOWN changes the digit, START moves to the next digit (saves on the last one),
+// BACK goes back one digit or cancels. Nothing is held, because
+// holding UP/DOWN on the fenix triggers system shortcuts.
 
 class DigitFactory extends WatchUi.PickerFactory {
     function initialize() {
@@ -45,7 +45,7 @@ class DigitFactory extends WatchUi.PickerFactory {
 }
 
 class DigitPicker extends WatchUi.Picker {
-    // intDigits cislic pred desetinnou teckou, decDigits za ni
+    // intDigits digits before the decimal point, decDigits after it
     function initialize(title as String, intDigits as Number, decDigits as Number, current as Float) {
         var pattern = [] as Array<PickerFactory or Drawable>;
         var defaults = [] as Array<Number>;
@@ -112,7 +112,7 @@ class DigitPickerDelegate extends WatchUi.PickerDelegate {
         _onDone = onDone;
     }
 
-    // Hodnota se slozi z cislic; mimo povoleny rozsah se posune na jeho okraj
+    // The value is built from the digits; outside the allowed range it is clamped to its edge
     function onAccept(values as Array) as Boolean {
         var n = 0;
         for (var i = 0; i < values.size(); i++) {
