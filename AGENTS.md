@@ -33,6 +33,8 @@ source/                Monkey C sources (everything that runs on the watch)
 resources/             icon, manifest strings, settings for Garmin Connect
 docs/                  documentation (see README.md)
 tools/gen-guide.py     generates docs/USER-GUIDE.md, docs/USER-GUIDE-CS.md and docs/USER-GUIDE-PL.md from Tr.mc
+tools/export-device.sh packs an official device definition + its fonts (run on the maintainer's PC)
+tools/import-device.sh installs that zip into the toolchain and prints porting facts
 build.sh               release build (increments the build number)
 manifest.xml           app id, supported models, permissions, languages
 ```

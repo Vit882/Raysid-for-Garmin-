@@ -168,7 +168,11 @@ An app crash is written to `GARMIN/APPS/LOGS/CIQ_LOG.YML` (`CIQ_LOG.TXT` on some
 The app is written and tested only for the fēnix 7X Pro Sapphire Solar. For another model:
 
 1. **Manifest:** add `<iq:product id="..."/>` to `<iq:products>` in `manifest.xml`. You can find the id in the SDK Manager or in the directory name in `~/.Garmin/ConnectIQ/Devices/`.
-2. **Device definition:** download the official definition through the SDK Manager (Garmin account). A hand-written substitute (see chapter 2) is only good for compile checks.
+2. **Device definition:** download the official definition through the SDK Manager (Garmin account, Devices tab). Then pack it together with only the fonts it needs:
+   ```bash
+   curl -sL https://raw.githubusercontent.com/Vit882/raysid-for-garmin-/main/tools/export-device.sh | bash -s <id>
+   ```
+   This creates `~/raysid-devices.zip` (a few MB; several ids can be given at once). In the build environment `bash tools/import-device.sh raysid-devices.zip` installs it into the toolchain and `~/.Garmin/ConnectIQ` and prints what matters for the port: display, icon size, memory, storage, touch, flashlight and the angles of the buttons (compare them with `drawMenuHint()`). Never commit these files; Garmin's license covers them. A hand-written substitute (see chapter 2) is only good for compile checks.
 3. **Compiling:** `bash build.sh <id>` produces `build/Raysid-<id>.prg` (`build/Raysid.prg` is copied only for fenix7xpro).
 4. **BLE:** the device must support `Toybox.BluetoothLowEnergy` and Connect IQ 3.2.0 or later.
 5. **Button marks:** `RaysidView.drawMenuHint()` draws arcs on the display edge next to the fēnix buttons; the angles are hard-coded (degrees from 3 o'clock, counterclockwise): START 24–36°, UP 174–186°, DOWN 204–216°. This fits five-button fēnix, epix, Forerunner 9xx and similar watches. For watches with a different button layout or touch only, the angles need adjusting (for example based on `System.getDeviceSettings()` or via a per-device resource), or the marks can be turned off.
