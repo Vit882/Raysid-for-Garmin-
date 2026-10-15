@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Publishes a GitHub Release when a folder releases/v<version>/ with .prg files
+# and notes.md is pushed to main. The tag v<version> is created on the pushed
+# commit; a release that already exists is left alone.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ['releases/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create missing releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          for dir in releases/v*/; do
+            tag=$(basename "$dir")
+            files=("$dir"*.prg)
+            [ ${#files[@]} -gt 0 ] || { echo "$tag: no .prg, skipped"; continue; }
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "$tag: already released"
+              continue
+            fi
+            notes="$dir/notes.md"
+            [ -f "$notes" ] || notes=/dev/null
+            gh release create "$tag" "${files[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "Raysid for Garmin ${tag#v}" \
+              --notes-file "$notes"
+          done

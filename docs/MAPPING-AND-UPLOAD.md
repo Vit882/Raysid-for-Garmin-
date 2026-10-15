@@ -129,6 +129,8 @@ A chunk from an older version without `rm<i>` gets a substitute descriptor `["ga
 | `rPart` | Number | route part number (`_part`) |
 | `rStart` | Number | unix time when recording was turned on (part of the route id) |
 | `rSess`, `rMeters`, `rMaxD`, `rMaxC` | Number / Float | statistics since recording was turned on |
+| `rSend` | Boolean | `sendReq`: send the whole queue now (set at `SEND_MIN` points, at the end of a route or by hand; cleared when the queue is empty) |
+| `rUpAt` | Number | `lastUpAt`: unix time of the last accepted non-final batch of the open route (0 = nothing sent yet), for the 40-minute keep-alive |
 | `rOn` | Boolean | written, but never read anywhere |
 
 The order of writes in `closeChunk` is intentional: first `r<i>` and `rm<i>`, then `rBatch`, `rRPts`, `rCount` and **`rChunks` last**. A crash between writes thus cannot create a chunk with an old batch number (the server would discard it as a duplicate). At startup `Recorder.initialize` recalculates `count` from the chunks (only with ≤ 100 waiting chunks, because of the watchdog).
@@ -191,7 +193,7 @@ The label with the spacing is computed by `cmpSubLabel()` as `dist << n`. Accord
 - `startCompact()` sets `_cmpNext = rHead + 1` (**the oldest chunk is skipped**, because it may be being sent right now) and `_cmpGain = 0`.
 - `compactStep()` processes at most `CMP_STEP` = 4 chunks per call. It is called after every added point (`addPoint`) and from the BLE timer via `compactTick()` when recording is not running, so a merge that has started finishes.
 - A chunk is skipped when it has fewer than 2 points, lacks `rm<i>`, or `meta[4] >= cmpMax` (except 99).
-- **Of each pair of neighbouring points, the one with the higher dose is kept** (index 3), together with its actual position, time and cps; an odd last point stays. Hotspots are thus not smeared, only the spacing grows.
+- **Of each pair of neighbouring points, the one with the higher dose is kept** (index 3), together with its actual position and cps, but with the **time of the newer of the two** (index 2); an odd last point stays. Hotspots are thus not smeared, only the spacing grows.
 - `rm<i>` with `meta[4] + 1` is written first, then `r<i>`; `count` is decreased by the freed points.
 - The pending chunk `_buf` is not merged (the loop ends before `rChunks`).
 - **End of a pass** (`_cmpNext >= rChunks`): saves `rCount`; when `_cmpGain == 0` (nothing to merge) or `count` is still ≥ `MAX_POINTS`, `stop()` + `storageFull()`. Otherwise, if it was full, `full = false`.
@@ -200,6 +202,15 @@ The label with the spacing is computed by `cmpSubLabel()` as `dist << n`. Accord
 ## 5. Uploader
 
 The watch has no internet of its own: `Communications.makeWebRequest` goes through the Garmin Connect app on the phone (phone paired and in range). **One chunk at a time, oldest first** is sent; after confirmation the chunk is deleted from the watch.
+
+**Sending in portions.** The website joins the batches of one route only when they arrive less than 1 hour apart; a batch that comes later becomes a separate small route. So the queue is not sent chunk by chunk, but drained all at once (`Recorder.sendReq`) when:
+
+- unsent points (`count`, including the pending chunk) reach `SEND_MIN` = 500,
+- a route ends (`closeChunk(true)`: stop, app exit, 5000 points), so short routes go out whole,
+- the user selects Upload to web (`retry()`),
+- part of the open route is already on the web (`lastUpAt > 0`) and `KEEP_SEC` = 40 min have passed since: the pending chunk is closed early (`closePartial()`, fewer than 50 points) and sent, so the route stays joined.
+
+`sendReq` is cleared when the queue is empty. Every point carries the unix time when it was measured (`addPoint`), never the time of sending. Limitation: the rest of a route closed by app exit goes out on the next start; if part of that route was sent more than an hour earlier, the web shows it as a separate route.
 
 ### 5.1 When it runs
 
@@ -214,9 +225,10 @@ The watch has no internet of its own: `Communications.makeWebRequest` goes throu
 3. Property `zmUpload` false → state `:upOff` ("off").
 4. Key missing (`currentKey()`) → `:upNoKey`.
 5. An earlier 401/403 (`_authFailed`) → `:upAuth`, nothing is sent until the key is changed by `settingsChanged()`, `retry()` or a successful verification.
-6. No closed chunk → `:upWait` ("ongoing", when recording or paused), otherwise `:upDone` ("all sent").
-7. Phone not connected (`System.getDeviceSettings().phoneConnected`) → `:upNoPhone`.
-8. Builds the body and headers, `_busy = true`, `_sentId = meta[0] + "#" + meta[1]`, state `:upSending` and `makeWebRequest(url(), body, options, method(:onResponse))`. Exception while sending → `_busy = false`, `:upErr`.
+6. Gate: unless `sendReq`, it is set when `count >= SEND_MIN`, or after the keep-alive (`closePartial()` itself calls `kick()`, which sends; the outer call then returns because `_busy`).
+7. No closed chunk → `sendReq = false` and `:upHold` ("collecting points") when points are waiting in the pending chunk, `:upWait` ("ongoing") when recording or paused, otherwise `:upDone` ("all sent"). Closed chunks but no `sendReq` → `:upHold`.
+8. Phone not connected (`System.getDeviceSettings().phoneConnected`) → `:upNoPhone`.
+9. Builds the body and headers, `_busy = true`, `_sentId = meta[0] + "#" + meta[1]`, state `:upSending` and `makeWebRequest(url(), body, options, method(:onResponse))`. Exception while sending → `_busy = false`, `:upErr`.
 
 ### 5.3 Request
 
@@ -281,7 +293,7 @@ Recorder                    Uploader                       Garmin Connect (phone
 
 ### 5.7 States for the user
 
-`Uploader.label()` = state text (`:upOff`, `:upNoKey`, `:upNoPhone`, `:upSending`, `:upWait`, `:upDone`, `:upAuth`, `:upErr` + code) and, when there are unsent points, ", queued N" (`recorder().count`). The Mapping screen shows a "Web: …" line in red on error or a rejected key, and in green after a successful verification.
+`Uploader.label()` = state text (`:upOff`, `:upNoKey`, `:upNoPhone`, `:upSending`, `:upHold`, `:upWait`, `:upDone`, `:upAuth`, `:upErr` + code) and, when there are unsent points, ", queued N" (`recorder().count`). The Mapping screen shows a "Web: …" line in red on error or a rejected key, and in green after a successful verification.
 
 ## 6. API key on the watch
 

@@ -127,6 +127,7 @@ manifest.xml           app id, supported models, permissions, languages
 ## Releases (GitHub Releases)
 
 - **When:** a release with ready-made `.prg` files is made **only on the project maintainer's instruction**.
+- **How:** put the `.prg` files and `notes.md` (release description, English) into `releases/v<version>/` and push to `main`. The workflow `.github/workflows/release.yml` creates the tag and the release with the files; an existing release is not changed. A test build in `releases/` is published, so only commit there what the maintainer approved.
 - **One `.prg` per watch model.** The file name contains the version, build and Connect IQ device id, for example `Raysid-1.1-b82-fenix7xpro.prg`. The release description gives the full model name for each file.
 - **Other models:** when a build for another model is made at a user's request (entry in `manifest.xml` and layout verification), it is added to the release and from then on included in **every subsequent** release.
 - **The list of supported models** and their verification status is in the README, section Supported watches.

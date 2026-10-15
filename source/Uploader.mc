@@ -11,18 +11,26 @@ import Toybox.Application;
 import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
+import Toybox.Time;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
 // Uploads recorded points to the Zhava mista website. The watch has no internet
-// of its own, requests go through Garmin Connect on the phone. One chunk at a time
-// is sent from the Recorder queue (oldest first); once the server confirms,
+// of its own, requests go through Garmin Connect on the phone. Points are held back
+// until there are enough of them (SEND_MIN) or the route ended; then one chunk at a time
+// is sent from the Recorder queue (oldest first) until it is empty; once the server confirms,
 // the chunk is deleted from the watch. If the phone is out of range or the server does not reply,
 // it is retried on the next tick. The request format is described in
 // docs/zhavamista/endpoint-proposal.md.
 class Uploader {
     const TICK_MS = 30000;
     const DEFAULT_URL = "https://www.zhavamista.cz/api/1.0/all/route-points";
+    // The web joins batches of one route only when they arrive less than 1 h apart.
+    // So nothing is sent until SEND_MIN unsent points have gathered or the route ended;
+    // then the whole queue is sent at once. While a route that was already partly
+    // sent stays open, the rest is sent at least every KEEP_SEC, so it stays joined.
+    const SEND_MIN = 500;
+    const KEEP_SEC = 2400;
 
     var status as Symbol = :upOff;   // translation key (Tr)
     var lastCode as Number = 0;      // HTTP code or Connect IQ error for :upErr
@@ -97,6 +105,8 @@ class Uploader {
     // "Web upload" selected in the menu: retry immediately
     function retry() as Void {
         _authFailed = false;
+        // Sending was asked for by hand: send whatever is ready
+        recorder().setSendReq(true);
         kick();
     }
 
@@ -227,9 +237,27 @@ class Uploader {
             setStatus(:upAuth);
             return;
         }
+        if (!r.sendReq) {
+            if (r.count >= SEND_MIN) {
+                r.setSendReq(true);
+            } else if (r.lastUpAt > 0 && Time.now().value() - r.lastUpAt >= KEEP_SEC) {
+                // Part of the open route is on the web already: send the rest before the web
+                // stops joining it (closing the chunk calls kick() again and that one sends)
+                r.setSendReq(true);
+                r.closePartial();
+                if (_busy) {
+                    return;
+                }
+            }
+        }
         var chunk = r.headChunk();
         if (chunk == null) {
-            setStatus(r.on || r.paused ? :upWait : :upDone);
+            r.setSendReq(false);
+            setStatus(r.count > 0 ? :upHold : (r.on || r.paused ? :upWait : :upDone));
+            return;
+        }
+        if (!r.sendReq) {
+            setStatus(:upHold);
             return;
         }
         if (!System.getDeviceSettings().phoneConnected) {
@@ -311,6 +339,10 @@ class Uploader {
             if (chunk != null && chunkId(chunk[1] as Array).equals(_sentId)) {
                 if (ok) {
                     sent += (chunk[0] as Array).size() / 5;
+                    // Keep-alive clock only for the route still being recorded
+                    if (!((chunk[1] as Array)[2] as Boolean)) {
+                        r.setLastUp(Time.now().value());
+                    }
                 }
                 r.dropHead();
             }

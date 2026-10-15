@@ -3,6 +3,7 @@
     <iq:application id="5a1c3b7e9d2f4e60a8b4c1d2e3f40516" type="watch-app" name="@Strings.AppName" entry="RaysidApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
         <iq:products>
             <iq:product id="fenix7xpro"/>
+            <iq:product id="fr70"/>
         </iq:products>
         <iq:permissions>
             <iq:uses-permission id="BluetoothLowEnergy"/>

@@ -24,3 +24,6 @@ bin/
 # Kopie dokumentace tretí strany (Zhava mista), v repozitari jen odkaz
 docs/zhavamista/api-docs.html
 docs/zhavamista/api-endpoints.json
+
+# Release files picked up by .github/workflows/release.yml
+!releases/**/*.prg

@@ -75,6 +75,10 @@ class Recorder {
     const CMP_STEP = 4;              // chunks per call (because of the watchdog)
     const CMP_ANY = 99;              // merge without limit
     var cmpMax as Number = 2;        // how many times each point may be merged (0 = never)
+    // Upload gating: the web joins batches of one route only when they arrive less than
+    // 1 h apart, so points are sent in larger portions (see Uploader.kick)
+    var sendReq as Boolean = false;  // drain the whole queue (set at 500 points or when a route ends)
+    var lastUpAt as Number = 0;      // unix time of the last accepted batch of the open route (0 = none yet)
 
     function initialize(state as RaysidState) {
         _state = state;
@@ -98,6 +102,9 @@ class Recorder {
         _routePts = num("rRPts", 0);
         _part = num("rPart", 1);
         _start = num("rStart", 0);
+        lastUpAt = num("rUpAt", 0);
+        var sr = Storage.getValue("rSend");
+        sendReq = sr instanceof Boolean && sr;
         session = num("rSess", 0);
         meters = flt("rMeters");
         maxDose = flt("rMaxD");
@@ -489,6 +496,7 @@ class Recorder {
             + d.hour.format("%02d") + ":" + d.min.format("%02d") + (_part > 1 ? " (" + _part + ")" : "");
         _batch = 0;
         _routePts = 0;
+        setLastUp(0);
         put("rRoute", _route as String);
         put("rRName", _routeName);
         put("rBatch", 0);
@@ -563,10 +571,35 @@ class Recorder {
         if (final) {
             _route = null;
             Storage.deleteValue("rRoute");
+            // The route ended: send all of it now, short routes too
+            setSendReq(true);
         }
         if (!_noKick) {
             uploader().kick();
         }
+    }
+
+    function setSendReq(v as Boolean) as Void {
+        if (sendReq != v) {
+            sendReq = v;
+            put("rSend", v);
+        }
+    }
+
+    function setLastUp(t as Number) as Void {
+        lastUpAt = t;
+        put("rUpAt", t);
+    }
+
+    // Closes the chunk in progress early (fewer than 50 points) so it can be sent
+    // before the web stops joining it to the route; true if a chunk was closed
+    function closePartial() as Boolean {
+        if (_route == null || _buf.size() == 0) {
+            return false;
+        }
+        var before = _chunks;
+        closeChunk(false);
+        return _chunks > before;
     }
 
     function flush() as Void {
@@ -625,11 +658,17 @@ class Recorder {
             var out = [] as Array<Number>;
             for (var p = 0; p < n; p += 2) {
                 var k = p * FIELDS;
-                if (p + 1 < n && (pts[k + FIELDS + 3] as Number) > (pts[k + 3] as Number)) {
-                    k += FIELDS;
+                // The point keeps the time of the newer of the two
+                var t = pts[k + 2] as Number;
+                if (p + 1 < n) {
+                    var t2 = pts[k + FIELDS + 2] as Number;
+                    t = t2 > t ? t2 : t;
+                    if ((pts[k + FIELDS + 3] as Number) > (pts[k + 3] as Number)) {
+                        k += FIELDS;
+                    }
                 }
                 for (var f = 0; f < FIELDS; f++) {
-                    out.add(pts[k + f] as Number);
+                    out.add(f == 2 ? t : pts[k + f] as Number);
                 }
             }
             var m2 = [meta[0], meta[1], meta[2], meta[3], level + 1] as Array<Storage.ValueType>;

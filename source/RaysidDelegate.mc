@@ -205,7 +205,7 @@ function displayMenu(state as RaysidState) as WatchUi.Menu2 {
         m.addItem(new WatchUi.MenuItem(Tr.t(:avgSpan), avgSpanLabel(state), :avgSpan, null));
     }
     m.addItem(new WatchUi.ToggleMenuItem(Tr.t(:backlight), null, :backlight, state.backlight, null));
-    m.addItem(new WatchUi.ToggleMenuItem(Tr.t(:blMapSys), Tr.t(:blMapSysSub), :blMapSys, state.blMapSys, null));
+    m.addItem(new WatchUi.ToggleMenuItem(Tr.t(:blMapSys), null, :blMapSys, state.blMapSys, null));
     m.addItem(new WatchUi.ToggleMenuItem(Tr.t(:debug), null, :debug, state.showDebug, null));
     return m;
 }
