@@ -12,7 +12,7 @@ A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over B
 | Watch | Garmin fēnix 7X Pro (id `fenix7xpro`; developed and tested on fēnix 7X Pro Sapphire Solar); other similar models as needed, see [Supported watches](#supported-watches) |
 | Dosimeter | [Raysid](https://raysid.com) (BLE) |
 | App languages | Czech, English, Polish |
-| Version | 1.2 (the build number is shown in the app under Help > About) |
+| Version | 1.3 (the build number is shown in the app under Help > About) |
 | License | [GPL-3.0-or-later](LICENSE) |
 
 ## Features

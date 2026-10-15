@@ -62,7 +62,7 @@ class Clicker {
         if (_ledOn) {
             ledOff();
         }
-        if (_state.backlight && _ticks % 10 == 0 && Attention has :backlight) {
+        if (_state.backlight && !(_state.blMapSys && _state.page == 2) && _ticks % 10 == 0 && Attention has :backlight) {
             try {
                 Attention.backlight(true);
             } catch (e) {

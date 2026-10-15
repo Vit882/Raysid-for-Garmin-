@@ -2,10 +2,16 @@
 
 The build number is incremented with every build sent for testing (`build.sh`); the version (`APP_VERSION`) changes only with larger releases. Older entries were written retrospectively from development records; details on the latest builds are in the reports in `docs/`.
 
+## 1.3
+
+### Build 88 (2026-10-15)
+- First public release on GitHub, for the fēnix 7X Pro.
+- **Display:** new option *Mapping: timeout* under *Backlight always on*. When on, the backlight on the Mapping screen times out as set on the watch, while the other screens stay lit.
+
 ## 1.2
 
 ### Build 87 (2026-10-15)
-- First public release on GitHub (v1.2), for the fēnix 7X Pro. Same features as build 86.
+- Version 1.2, prepared for release with README screenshots; released as part of 1.3. Same features as build 86.
 
 ## 1.1
 

@@ -50,6 +50,7 @@ class RaysidState {
 
     // Settings (persisted between launches)
     var backlight as Boolean = false;  // display stays lit the whole time the app runs
+    var blMapSys as Boolean = false;   // ...except on the Mapping screen, which follows the watch timeout
     var sound as Boolean = false;      // beeping by cps
     var led as Boolean = false;        // flashlight blink by cps
     var divider as Number = 10;        // 1 beep per N counts
@@ -112,6 +113,7 @@ class RaysidState {
 
     function initialize() {
         backlight = load("bl", backlight) as Boolean;
+        blMapSys = load("blM", blMapSys) as Boolean;
         sound = load("snd", sound) as Boolean;
         led = load("led", led) as Boolean;
         divider = load("div", divider) as Number;
@@ -421,6 +423,7 @@ class RaysidState {
 
     function save() as Void {
         put("bl", backlight);
+        put("blM", blMapSys);
         put("snd", sound);
         put("led", led);
         put("div", divider);
