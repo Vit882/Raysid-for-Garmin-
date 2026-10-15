@@ -20,7 +20,7 @@ The developer receives no data. The app contains no analytics, advertising or tr
 
 ## Deleting data
 
-Uploaded or unsent points can be deleted in the app menu. Uninstalling the app removes all its data from the watch.
+Unsent points can be deleted in the app menu. Points already uploaded are managed on zhavamista.cz. Uninstalling the app removes all its data from the watch.
 
 ## Contact
 
