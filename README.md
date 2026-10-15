@@ -99,4 +99,4 @@ This program is free software under the **GNU GPL version 3 or later** ([LICENSE
 - When distributing, you must keep the authors and the license.
 - Modified versions you distribute (including ready-made `.prg` files) must remain open source under the same license.
 
-Raysid is a product of Raysid. Garmin, fēnix and Connect IQ are trademarks of Garmin Ltd. This project is not affiliated with them.
+Raysid is a product of IN-NEW (Wrocław, Poland, [raysid.com](https://raysid.com)). Garmin, fēnix and Connect IQ are trademarks of Garmin Ltd. This project is not affiliated with them.
