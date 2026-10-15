@@ -4,6 +4,9 @@ The build number is incremented with every build sent for testing (`build.sh`); 
 
 ## 1.1
 
+### Build 84 (2026-10-15)
+- Built against the official fēnix 7X Pro device definition from Garmin instead of a hand-written one. No functional changes.
+
 ### Build 83 (15 Oct 2026)
 - **Target watch:** the build is now for the fēnix 7X Pro (id `fenix7xpro`), on which the app is tested. Previously it was compiled for the fēnix 7X. Features are unchanged; settings and unsent points are kept.
 - Documentation and code comments translated to English; user guide now also in Polish.

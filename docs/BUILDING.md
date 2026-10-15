@@ -41,7 +41,7 @@ The project is compiled with **Connect IQ SDK 9.2.0**.
 - **Usual way:** install the **Connect IQ SDK Manager** from https://developer.garmin.com/connect-iq/sdk/, sign in with a Garmin account, download SDK 9.2.0 (or newer) and, in the **Devices** tab, the device "fēnix 7X Pro / Solar / Sapphire Solar" (`fenix7xpro`).
 - **Project cloud environment:** `/mnt/project-files/.toolchain/` contains a prepared toolchain outside the repository (described in its `README.txt`):
   - `sdk/`: SDK 9.2.0, only `bin/`, `share/` and `resources/` (no documentation or samples),
-  - `Devices/fenix7xpro/compiler.json`: a hand-written device definition (see below; the older `Devices/fenix7x` is only for the fēnix 7X without Pro),
+  - `Devices/fenix7xpro/`: the official device definition (see below; the older hand-written `Devices/fenix7x` is only for the fēnix 7X without Pro),
   - `developer_key.der`: the developer key of this environment (see chapter 3).
 
 The shared directory may be mounted as `noexec`, so `monkeyc` is run via `bash`: `bash /mnt/project-files/.toolchain/sdk/bin/monkeyc ...`.
@@ -54,21 +54,22 @@ The SDK looks for device definitions in `~/.Garmin/ConnectIQ/Devices/<id>/`.
 
 **Official definitions** are downloaded by the SDK Manager, and the download **requires signing in with a Garmin account**. They contain everything: `compiler.json`, `simulator.json`, fonts, button layout, the watch image for the simulator.
 
-**The substitute definition in the toolchain** (`/mnt/project-files/.toolchain/Devices/fenix7xpro/compiler.json`) was created because the official definition could not be downloaded without signing in. Installation:
+**In the project's cloud toolchain** `/mnt/project-files/.toolchain/Devices/fenix7xpro/` holds the **official** fēnix 7X Pro definition (downloaded by the maintainer with the SDK Manager on 2026-10-15; not part of this repository, because Garmin's SDK license covers it). Installation:
 
 ```bash
 mkdir -p ~/.Garmin/ConnectIQ/Devices
 cp -r /mnt/project-files/.toolchain/Devices/fenix7xpro ~/.Garmin/ConnectIQ/Devices/
 ```
 
-What the substitute definition can and cannot do:
+Useful facts from the official fēnix 7X Pro definition:
 
-- **The part number** (`partNumber`) in the substitute definition is not verified; it has no effect on sideloading.
-- **It is enough for a compile check**, including strict type checking (`-l 3`), and for producing a `.prg`.
-- It contains only basic data: round 280×280 display, 8 bits per pixel, family `round-280x280`, 40×40 icon, watch-app memory limit 786 432 B, Connect IQ 5.2.0, languages `ces`, `eng` and `pol`. The values are estimated, not taken from Garmin (`displayName` is "fenix 7X Pro (stub for compile check; part number not verified)").
-- **You cannot run the simulator with it** (`simulator.json`, fonts and other files are missing; the cloud also lacks the simulator libraries).
-- It is not certain that a `.prg` built against it will run on the watch the same way as a build against the official definition. So far it works on the watch, but on any odd behavior (crash at start, wrong fonts, memory error) first try building against the official definition.
-- Do not upload to the Connect IQ Store with it (always build the `.iq` package against the official definitions).
+- Part number `006-B4376-00`, Connect IQ 5.2.0 (`API level 5.2`), MIP display 280×280, 8 bits per pixel (64 colors), launcher icon 40×40.
+- Memory limit for a watch-app 786 432 B, app storage capacity 10 MB (`appStorageCapacity` in `simulator.json`).
+- Touch screen, flashlight with white and red light.
+- Button positions in `simulator.json` match the angles used by `RaysidView.drawMenuHint()` (START about 30°, UP 180°, DOWN about 209°).
+- The simulator also needs the fonts named in `simulator.json` (`FNT_FENIX6X_*` in `~/.Garmin/ConnectIQ/Fonts`), which are not in the toolchain yet.
+
+Without a Garmin account you can write a minimal substitute `compiler.json` (resolution, family, icon size, memory limit). That is enough for a compile check with `-l 3`, but not for the simulator or the Connect IQ Store, and it is not certain the build behaves the same on the watch.
 
 ## 3. Developer key
 
@@ -167,7 +168,7 @@ An app crash is written to `GARMIN/APPS/LOGS/CIQ_LOG.YML` (`CIQ_LOG.TXT` on some
 The app is written and tested only for the fēnix 7X Pro Sapphire Solar. For another model:
 
 1. **Manifest:** add `<iq:product id="..."/>` to `<iq:products>` in `manifest.xml`. You can find the id in the SDK Manager or in the directory name in `~/.Garmin/ConnectIQ/Devices/`.
-2. **Device definition:** download the official definition through the SDK Manager (Garmin account). Make a hand-written substitute like the fenix7xpro one only for compile checks.
+2. **Device definition:** download the official definition through the SDK Manager (Garmin account). A hand-written substitute (see chapter 2) is only good for compile checks.
 3. **Compiling:** `bash build.sh <id>` produces `build/Raysid-<id>.prg` (`build/Raysid.prg` is copied only for fenix7xpro).
 4. **BLE:** the device must support `Toybox.BluetoothLowEnergy` and Connect IQ 3.2.0 or later.
 5. **Button marks:** `RaysidView.drawMenuHint()` draws arcs on the display edge next to the fēnix buttons; the angles are hard-coded (degrees from 3 o'clock, counterclockwise): START 24–36°, UP 174–186°, DOWN 204–216°. This fits five-button fēnix, epix, Forerunner 9xx and similar watches. For watches with a different button layout or touch only, the angles need adjusting (for example based on `System.getDeviceSettings()` or via a per-device resource), or the marks can be turned off.
