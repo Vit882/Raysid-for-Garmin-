@@ -1,0 +1,11 @@
+<settings>
+    <setting propertyKey="@Properties.zmUpload" title="@Strings.SetUpload">
+        <settingConfig type="boolean" />
+    </setting>
+    <setting propertyKey="@Properties.zmKey" title="@Strings.SetKey">
+        <settingConfig type="password" />
+    </setting>
+    <setting propertyKey="@Properties.zmUrl" title="@Strings.SetUrl">
+        <settingConfig type="alphaNumeric" />
+    </setting>
+</settings>

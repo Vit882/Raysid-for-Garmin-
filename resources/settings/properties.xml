@@ -1,0 +1,5 @@
+<properties>
+    <property id="zmUpload" type="boolean">true</property>
+    <property id="zmKey" type="string"></property>
+    <property id="zmUrl" type="string"></property>
+</properties>

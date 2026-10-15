@@ -1,0 +1,6 @@
+<strings>
+    <string id="AppName">Raysid</string>
+    <string id="SetUpload">Odesílat na Žhavá místa / Upload to Žhavá místa</string>
+    <string id="SetKey">API klíč Žhavých míst / Žhavá místa API key</string>
+    <string id="SetUrl">Adresa API (prázdné = výchozí) / API URL (empty = default)</string>
+</strings>

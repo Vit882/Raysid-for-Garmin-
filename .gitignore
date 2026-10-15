@@ -1,0 +1,26 @@
+# Vyvojarsky klic: NIKDY necommitovat (kazdy si vyrobi vlastni, viz docs/SESTAVENI.md)
+*.der
+*.pem
+developer_key*
+
+# Vystupy prekladu
+build/*
+!build/build-number.txt
+bin/
+*.prg
+*.prg.debug.xml
+*.iq
+
+# Editor a system
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Logy z hodinek (muzou obsahovat polohu)
+*.TXT
+*.YML
+
+# Kopie dokumentace tretí strany (Zhava mista), v repozitari jen odkaz
+docs/zhavamista/api-docs.html
+docs/zhavamista/api-endpoints.json
