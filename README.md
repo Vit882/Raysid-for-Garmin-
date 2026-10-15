@@ -2,6 +2,9 @@
 
 A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over Bluetooth and shows the dose rate and count rate right on your wrist. It has alarms, clicks, a chart and GPS radiation mapping, including uploading routes to the Czech website **[Žhavá místa](https://zhavamista.cz)**.
 
+<p align="center"><img src="docs/images/screens.png" alt="Main screen, chart, Mapping screen and menu of the app on a fēnix 7X Pro" width="100%"></p>
+<p align="center"><sub>Rendered in the Connect IQ simulator (fēnix 7X Pro) with demo data, more in <a href="#screenshots">Screenshots</a>.</sub></p>
+
 **Česky / Polski:** the user guide is also available in Czech ([docs/USER-GUIDE-CS.md](docs/USER-GUIDE-CS.md)) and Polish ([docs/USER-GUIDE-PL.md](docs/USER-GUIDE-PL.md)).
 
 | | |
@@ -9,7 +12,7 @@ A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over B
 | Watch | Garmin fēnix 7X Pro (id `fenix7xpro`; developed and tested on fēnix 7X Pro Sapphire Solar); other similar models as needed, see [Supported watches](#supported-watches) |
 | Dosimeter | [Raysid](https://raysid.com) (BLE) |
 | App languages | Czech, English, Polish |
-| Version | 1.1 (the build number is shown in the app under Help > About) |
+| Version | 1.2 (the build number is shown in the app under Help > About) |
 | License | [GPL-3.0-or-later](LICENSE) |
 
 ## Features
@@ -32,6 +35,16 @@ A Garmin watch app (Connect IQ) that connects to the **Raysid** dosimeter over B
 - **Help on the watch** in three languages.
 
 A detailed description of the controls is in the [user guide](docs/USER-GUIDE.md) ([Česky](docs/USER-GUIDE-CS.md), [Polski](docs/USER-GUIDE-PL.md)).
+
+## Screenshots
+
+From the Connect IQ simulator (fēnix 7X Pro, English UI). Bluetooth does not work in the simulator, so the values come from a demo build that walks past a hotspot.
+
+| Main screen | Chart (60 s) | Mapping |
+|:---:|:---:|:---:|
+| <img src="docs/images/01-main.png" width="260" alt="Main screen"> | <img src="docs/images/03-chart-60s.png" width="260" alt="Chart"> | <img src="docs/images/04-mapping.png" width="260" alt="Mapping screen"> |
+| **Menu** | **Help** | |
+| <img src="docs/images/05-menu.png" width="260" alt="Menu"> | <img src="docs/images/07-help-page.png" width="260" alt="Help page"> | |
 
 ## Installing on the watch
 

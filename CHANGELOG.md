@@ -2,6 +2,11 @@
 
 The build number is incremented with every build sent for testing (`build.sh`); the version (`APP_VERSION`) changes only with larger releases. Older entries were written retrospectively from development records; details on the latest builds are in the reports in `docs/`.
 
+## 1.2
+
+### Build 87 (2026-10-15)
+- First public release on GitHub (v1.2), for the fēnix 7X Pro. Same features as build 86.
+
 ## 1.1
 
 ### Build 86 (2026-10-15)

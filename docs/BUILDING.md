@@ -104,7 +104,7 @@ What the script does (in this order):
 4. Compiles `monkeyc -d <device> -f monkey.jungle -o build/Raysid-<device>.prg -y <key> -l 3 -w`.
 5. After a successful compile, saves the new number to `build/build-number.txt` and, for fenix7xpro, copies the result to `build/Raysid.prg`.
 
-**The app version** (`APP_VERSION`, currently `"1.1"`) and the year (`APP_YEAR`) are hard-coded in `build.sh`. For a new release change them there, not in `BuildInfo.mc`, because that file is overwritten on the next build.
+**The app version** (`APP_VERSION`, currently `"1.2"`) and the year (`APP_YEAR`) are hard-coded in `build.sh`. For a new release change them there, not in `BuildInfo.mc`, because that file is overwritten on the next build.
 
 The build number distinguishes test builds sent to the watch. It increases only with a successful `build.sh`; for a mere compile check call `monkeyc` directly (chapter 5).
 
