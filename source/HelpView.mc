@@ -33,12 +33,18 @@ class HelpView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
         dc.clear();
         dc.setColor(0xFFAA00, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(r, h * 0.11, Graphics.FONT_TINY, _title, Graphics.TEXT_JUSTIFY_CENTER);
+        var titleY = (h * 0.11).toNumber();
+        dc.drawText(r, titleY, Graphics.FONT_TINY, _title, Graphics.TEXT_JUSTIFY_CENTER);
 
         // Keep the text window in the middle of the round display, where it is wide enough
         var font = Graphics.FONT_XTINY;
         var lh = dc.getFontHeight(font);
         var top = (h * 0.22).toNumber();
+        // The up arrow (top - 10 .. top - 3) must stay clear of the title
+        var minTop = titleY + dc.getFontHeight(Graphics.FONT_TINY) + 12;
+        if (top < minTop) {
+            top = minTop;
+        }
         var bottom = (h * 0.80).toNumber();
         var dy = r - top;
         var maxW = (2 * Math.sqrt(r * r - dy * dy) - 16).toFloat();
