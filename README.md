@@ -75,6 +75,7 @@ The app is written for round button watches similar to the fēnix: START, BACK, 
 | File | For | Contents |
 |---|---|---|
 | [docs/USER-GUIDE.md](docs/USER-GUIDE.md) | user | controls and all features (same text as the help on the watch) |
+| [docs/MENU.md](docs/MENU.md) | user | map of the whole menu as a tree (English, Czech, Polish) |
 | [docs/USER-GUIDE-CS.md](docs/USER-GUIDE-CS.md), [docs/USER-GUIDE-PL.md](docs/USER-GUIDE-PL.md) | user | the user guide in Czech and Polish |
 | [docs/BUILDING.md](docs/BUILDING.md) | developer | SDK, developer key, building, installing, logs, other models, releasing |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | developer | modules, data flow, timers, menu, stored data, alarms, OVL |

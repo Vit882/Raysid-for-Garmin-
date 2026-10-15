@@ -85,7 +85,7 @@ manifest.xml           app id, supported models, permissions, languages
    - all three languages and the help;
    - screens in every state: no connection, no data, OVL, alarm, debug screen, mapping off, on, paused or full.
 4. Compile with `-l 3`.
-5. Update the documentation (`docs/*.md`, the user guide via `tools/gen-guide.py`) and `CHANGELOG.md`.
+5. Update the documentation (`docs/*.md`, the user guide via `tools/gen-guide.py`, the menu map via `tools/gen-menu.py` (update its structure when the menu changes)) and `CHANGELOG.md`.
 6. Test build: `bash build.sh`. The result is in `build/Raysid.prg`.
 
 ## Testing
