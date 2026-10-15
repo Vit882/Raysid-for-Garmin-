@@ -526,6 +526,13 @@ class RaysidView extends WatchUi.View {
         // Scales: dose rate on the left, cps on the right. Drawn last with a black
         // background so the chart lines never cover them.
         var fh = Graphics.getFontHeight(Graphics.FONT_XTINY);
+        // Also blank the gap between the chart edge and the labels (and a few px outside), otherwise a line
+        // entering there looks like a minus sign in front of the value
+        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
+        dc.fillRectangle(x0 - 4, y0 + 1, 6, fh);
+        dc.fillRectangle(x0 - 4, y1 - 1 - fh, 6, fh);
+        dc.fillRectangle(x1 - 2, y0 + 1, 6, fh);
+        dc.fillRectangle(x1 - 2, y1 - 1 - fh, 6, fh);
         dc.setColor(CHART_DOSE, Graphics.COLOR_BLACK);
         dc.drawText(x0 + 2, y0 + 1, Graphics.FONT_XTINY, formatDose(dr[1]), Graphics.TEXT_JUSTIFY_LEFT);
         dc.drawText(x0 + 2, y1 - 1 - fh, Graphics.FONT_XTINY, formatDose(dr[0]), Graphics.TEXT_JUSTIFY_LEFT);

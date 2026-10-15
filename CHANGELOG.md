@@ -4,6 +4,9 @@ The build number is incremented with every build sent for testing (`build.sh`); 
 
 ## 1.1
 
+### Build 86 (2026-10-15)
+- **Chart:** a line running into the scale labels no longer looks like a minus sign in front of the lowest value.
+
 ### Build 85 (2026-10-15)
 - **Help:** the scroll-up arrow no longer overlaps the chapter title; the text starts a little lower.
 
