@@ -126,10 +126,10 @@ class RaysidView extends WatchUi.View {
         // OVL only for the quantity that went into it
         var blinkOn = (System.getTimer() / 500) % 2 == 0;
         var cpsTop = _state.swapMain;
-        drawMain(dc, cx, cpsTop ? base2 : base1, doseText, doseU, cpsTop ? f2 : f1, cpsTop ? smallU : Graphics.FONT_SMALL,
-            cpsTop ? Graphics.FONT_MEDIUM : Graphics.FONT_LARGE, doseColor, doseOvl(_state), blinkOn);
-        drawMain(dc, cx, cpsTop ? base1 : base2, cpsText, cpsU, cpsTop ? f1 : f2, cpsTop ? Graphics.FONT_SMALL : smallU,
-            cpsTop ? Graphics.FONT_LARGE : Graphics.FONT_MEDIUM, cpsColor, cpsOvl(_state), blinkOn);
+        drawMain(dc, cx, cpsTop ? base2 : base1, doseText, doseU, [cpsTop ? f2 : f1, cpsTop ? smallU : Graphics.FONT_SMALL,
+            cpsTop ? Graphics.FONT_MEDIUM : Graphics.FONT_LARGE], doseColor, doseOvl(_state), blinkOn);
+        drawMain(dc, cx, cpsTop ? base1 : base2, cpsText, cpsU, [cpsTop ? f1 : f2, cpsTop ? Graphics.FONT_SMALL : smallU,
+            cpsTop ? Graphics.FONT_LARGE : Graphics.FONT_MEDIUM], cpsColor, cpsOvl(_state), blinkOn);
 
         if ((_state.sound || _state.led || _state.vibrate) && _state.overload) {
             dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
@@ -246,10 +246,13 @@ class RaysidView extends WatchUi.View {
     // Line with a number and unit on the given baseline. If the number does
     // not fit the width, a smaller font is used; the line position stays the same.
     // One line of the main screen; on OVL in a text font (number fonts have no
-    // letters) on the same baseline, blinking
+    // letters) on the same baseline, blinking. fonts = [number, unit, OVL]
+    // (an array because Connect IQ 3.x allows at most 9 arguments)
     private function drawMain(dc as Graphics.Dc, cx as Number, base as Number, num as String, unit as String,
-            font as Graphics.FontType, unitFont as Graphics.FontType, ovlFont as Graphics.FontType,
-            color as Number, ovl as Boolean, blinkOn as Boolean) as Void {
+            fonts as Array<Graphics.FontType>, color as Number, ovl as Boolean, blinkOn as Boolean) as Void {
+        var font = fonts[0];
+        var unitFont = fonts[1];
+        var ovlFont = fonts[2];
         if (ovl) {
             if (!blinkOn) {
                 return;
@@ -514,12 +517,14 @@ class RaysidView extends WatchUi.View {
 
         drawAlarmBands(dc, x0, x1, y0, y1, tMin, now);
         if (buckets != null) {
-            drawBuckets(dc, buckets, 3, 4, 5, cr, x0, x1, y0, y1, tMin, now, CHART_CPS, true);
-            drawBuckets(dc, buckets, 0, 1, 2, dr, x0, x1, y0, y1, tMin, now, CHART_DOSE, false);
+            var g = [x0, x1, y0, y1, tMin, now] as Array<Number>;
+            drawBuckets(dc, buckets, [3, 4, 5] as Array<Number>, cr, g, CHART_CPS, true);
+            drawBuckets(dc, buckets, [0, 1, 2] as Array<Number>, dr, g, CHART_DOSE, false);
         } else {
             dc.setPenWidth(2);
-            drawSeries(dc, _state.smCps, cr, x0, x1, y0, y1, tMin, now, CHART_CPS);
-            drawSeries(dc, _state.smDose, dr, x0, x1, y0, y1, tMin, now, CHART_DOSE);
+            var g = [x0, x1, y0, y1, tMin, now] as Array<Number>;
+            drawSeries(dc, _state.smCps, cr, g, CHART_CPS);
+            drawSeries(dc, _state.smDose, dr, g, CHART_DOSE);
         }
         dc.setPenWidth(1);
 
@@ -648,9 +653,12 @@ class RaysidView extends WatchUi.View {
 
     // Average as a thick line; for cps also a thin dimmed min-max tick per segment,
     // so short spikes are visible (dose rate follows cps, a second tick would only distract)
-    private function drawBuckets(dc as Graphics.Dc, b as Array<Array>, iMin as Number, iAvg as Number, iMax as Number,
-            range as Array<Float>, x0 as Number, x1 as Number, y0 as Number, y1 as Number,
-            tMin as Number, now as Number, color as Number, whisker as Boolean) as Void {
+    // idx = [min, avg, max] indexes into b, g = [x0, x1, y0, y1, tMin, now]
+    // (arrays because Connect IQ 3.x allows at most 9 arguments)
+    private function drawBuckets(dc as Graphics.Dc, b as Array<Array>, idx as Array<Number>,
+            range as Array<Float>, g as Array<Number>, color as Number, whisker as Boolean) as Void {
+        var iMin = idx[0], iAvg = idx[1], iMax = idx[2];
+        var x0 = g[0], x1 = g[1], y0 = g[2], y1 = g[3], tMin = g[4], now = g[5];
         var tSpan = (now - tMin).toFloat();
         var vSpan = range[1] - range[0];
         var times = b[6] as Array<Number>;
@@ -704,9 +712,10 @@ class RaysidView extends WatchUi.View {
         return [lo, hi];
     }
 
+    // g = [x0, x1, y0, y1, tMin, now]
     private function drawSeries(dc as Graphics.Dc, vals as Array<Float>, range as Array<Float>,
-            x0 as Number, x1 as Number, y0 as Number, y1 as Number,
-            tMin as Number, now as Number, color as Number) as Void {
+            g as Array<Number>, color as Number) as Void {
+        var x0 = g[0], x1 = g[1], y0 = g[2], y1 = g[3], tMin = g[4], now = g[5];
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         var px = 0, py = 0;
         var first = true;
