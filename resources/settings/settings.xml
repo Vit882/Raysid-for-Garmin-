@@ -3,7 +3,7 @@
         <settingConfig type="boolean" />
     </setting>
     <setting propertyKey="@Properties.zmKey" title="@Strings.SetKey">
-        <settingConfig type="password" />
+        <settingConfig type="alphaNumeric" />
     </setting>
     <setting propertyKey="@Properties.zmUrl" title="@Strings.SetUrl">
         <settingConfig type="alphaNumeric" />
