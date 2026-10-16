@@ -1,1 +1,30 @@
 project.manifest = manifest.xml
+
+# Launcher icon size differs by model (launcherIcon in the device's compiler.json);
+# 40x40 is in resources/, other sizes come from tools/gen-icons.py
+fr165.resourcePath = $(fr165.resourcePath);resources-icon54
+fr165m.resourcePath = $(fr165m.resourcePath);resources-icon54
+fr57042mm.resourcePath = $(fr57042mm.resourcePath);resources-icon54
+fr70.resourcePath = $(fr70.resourcePath);resources-icon54
+epix2.resourcePath = $(epix2.resourcePath);resources-icon60
+epix2pro42mm.resourcePath = $(epix2pro42mm.resourcePath);resources-icon60
+epix2pro47mm.resourcePath = $(epix2pro47mm.resourcePath);resources-icon60
+epix2pro51mm.resourcePath = $(epix2pro51mm.resourcePath);resources-icon60
+fenix843mm.resourcePath = $(fenix843mm.resourcePath);resources-icon60
+fenix943mm.resourcePath = $(fenix943mm.resourcePath);resources-icon60
+fenix9pro43mm.resourcePath = $(fenix9pro43mm.resourcePath);resources-icon60
+fenixe.resourcePath = $(fenixe.resourcePath);resources-icon60
+fr265.resourcePath = $(fr265.resourcePath);resources-icon60
+fr265s.resourcePath = $(fr265s.resourcePath);resources-icon60
+instinct3amoled45mm.resourcePath = $(instinct3amoled45mm.resourcePath);resources-icon60
+instinct3amoled50mm.resourcePath = $(instinct3amoled50mm.resourcePath);resources-icon60
+marq2.resourcePath = $(marq2.resourcePath);resources-icon60
+marq2aviator.resourcePath = $(marq2aviator.resourcePath);resources-icon60
+fenix847mm.resourcePath = $(fenix847mm.resourcePath);resources-icon65
+fenix8pro47mm.resourcePath = $(fenix8pro47mm.resourcePath);resources-icon65
+fenix947mm.resourcePath = $(fenix947mm.resourcePath);resources-icon65
+fenix9pro47mm.resourcePath = $(fenix9pro47mm.resourcePath);resources-icon65
+fenix9pro51mm.resourcePath = $(fenix9pro51mm.resourcePath);resources-icon65
+fr57047mm.resourcePath = $(fr57047mm.resourcePath);resources-icon65
+fr965.resourcePath = $(fr965.resourcePath);resources-icon65
+fr970.resourcePath = $(fr970.resourcePath);resources-icon65

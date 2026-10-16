@@ -70,6 +70,22 @@ The app is written for round button watches similar to the fēnix: START, BACK, 
 | fēnix 7X Pro (Solar / Sapphire Solar) | `fenix7xpro` | tested on the watch |
 | Forerunner 70 | `fr70` | checked in the simulator only; no flashlight, so its options are hidden |
 
+The layout is computed from the display size, so models with the same resolution behave the same. One model per resolution was checked in the simulator (marked ✓); the others in its row share that resolution and were only compiled.
+
+| Display | Models (Connect IQ ids) |
+|---|---|
+| 218 px MIP | `fr255s`✓ `fr255sm` |
+| 240 px MIP | `fenix7s`✓ `fenix7spro` `fenix6spro` |
+| 260 px MIP | `fenix7`✓ `fenix7pro` `fenix7pronowifi` `fenix6pro`✓ (Connect IQ 3.4) `fenix8solar47mm` `fenix9prosolar47mm` `fr255` `fr255m` `fr955` |
+| 280 px MIP | `fenix7xpro` `fenix7x` `fenix7xpronowifi` `fenix6xpro` `fenix8solar51mm` `fenix9prosolar51mm` `enduro3` `enduro4` |
+| 360 px AMOLED | `fr265s`✓ |
+| 390 px AMOLED | `fr70`✓ `fr165` `fr165m` `fr57042mm` `epix2pro42mm` `instinct3amoled45mm` `marq2` `marq2aviator` |
+| 416 px AMOLED | `epix2`✓ `epix2pro47mm` `fenix843mm` `fenix943mm` `fenix9pro43mm` `fenixe` `fr265` `instinct3amoled50mm` |
+| 454 px AMOLED | `fenix847mm`✓ `fenix8pro47mm` `fenix947mm` `fenix9pro47mm` `epix2pro51mm` `fr57047mm` `fr965` `fr970` |
+| 466 px AMOLED | `fenix9pro51mm`✓ |
+
+Left out: fēnix 6 / 6S (non-Pro), Enduro (1st gen) and Instinct 3 Solar have only 128 kB of app memory; Venu has no UP/DOWN buttons; Instinct 2 has a monochrome display with a sub-window.
+
 ## Documentation
 
 | File | For | Contents |
