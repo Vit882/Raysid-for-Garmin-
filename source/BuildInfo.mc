@@ -3,4 +3,4 @@
 const APP_VERSION = "1.3";
 const APP_YEAR = "2026";
 const BUILD_DATE = "16.10.2026";
-const BUILD_NUM = 90;
+const BUILD_NUM = 91;

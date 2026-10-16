@@ -4,6 +4,9 @@ The build number is incremented with every build sent for testing (`build.sh`); 
 
 ## 1.3
 
+### Build 91 (2026-10-16)
+- **About:** the contact e-mail is now cenek@zhavamista.cz.
+
 ### Build 90 (2026-10-16)
 - **Connect IQ Store:** the app is being prepared for the official Connect IQ Store as one package for 48 round button watches: fēnix 6 Pro, 7, 8, 9 and E, epix 2, Enduro 3 and 4, Forerunner 165, 255, 265, 570, 955, 965 and 970, Instinct 3 AMOLED and MARQ 2.
 - **Settings in the phone:** the Žhavá místa API key is shown as plain text while typing, so the long key can be checked.
