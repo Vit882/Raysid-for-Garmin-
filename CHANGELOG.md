@@ -2,13 +2,12 @@
 
 The build number is incremented with every build sent for testing (`build.sh`); the version (`APP_VERSION`) changes only with larger releases. Older entries were written retrospectively from development records; details on the latest builds are in the reports in `docs/`.
 
-## Unreleased
+## 1.3
 
+### Build 90 (2026-10-16)
 - **Connect IQ Store:** the app is being prepared for the official Connect IQ Store as one package for 48 round button watches: fēnix 6 Pro, 7, 8, 9 and E, epix 2, Enduro 3 and 4, Forerunner 165, 255, 265, 570, 955, 965 and 970, Instinct 3 AMOLED and MARQ 2.
 - **Settings in the phone:** the Žhavá místa API key is shown as plain text while typing, so the long key can be checked.
 - **Launcher icon** in sharper versions for watches with larger icons.
-
-## 1.3
 
 ### Build 89 (2026-10-15)
 - **Forerunner 70:** first build; layout checked in the simulator. The flashlight options are hidden (the watch has none).
