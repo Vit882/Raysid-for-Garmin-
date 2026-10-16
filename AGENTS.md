@@ -10,7 +10,7 @@ A guide for anyone taking over the project: an AI agent (Claude, Codex and other
 - change settings stored in the Raysid;
 - record GPS points with dose and upload them via the phone to the Žhavá místa website.
 
-The users are Czech and Polish hunters of radioactive spots. The app is distributed outside the Connect IQ Store as a `.prg` for a specific watch model.
+The users are Czech and Polish hunters of radioactive spots. The app is distributed as a `.prg` per watch model on GitHub and is being prepared for the Connect IQ Store as one `.iq` package for all models in `manifest.xml`.
 
 ## Repository map
 
@@ -117,7 +117,9 @@ manifest.xml           app id, supported models, permissions, languages
   - Connect IQ allows only one pending BLE request, so BleManager has a queue.
   - The vibration motor can distinguish at most about 4 pulses per second.
   - The click timer runs at 100 ms, so more than 10 signals per second is not possible.
-  - The launcher icon for fenix7xpro is 40×40 px.
+  - The launcher icon is 40×40 px on most MIP models; other sizes are in `resources-icon<N>` (see `monkey.jungle`).
+  - Connect IQ 3.x (fēnix 6) allows at most 9 arguments per method; pass more values as an array.
+  - Build all models at once with `monkeyc -e` (the Store package) to catch API differences.
   - RSSI is available only while scanning.
   - An app installed over USB (sideload) does not receive settings from Garmin Connect, so the API key is entered on the watch.
 - **Upload:**
